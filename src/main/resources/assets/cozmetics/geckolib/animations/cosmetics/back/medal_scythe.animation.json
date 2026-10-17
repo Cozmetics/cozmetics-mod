@@ -1,0 +1,97 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.medalScythe.idle": {
+      "loop": true,
+      "animation_length": 1.5417,
+      "bones": {
+        "bone2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                360,
+                0
+              ]
+            },
+            "1.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "position": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.4583": {
+              "vector": [
+                0,
+                3,
+                0
+              ]
+            },
+            "0.5": {
+              "vector": [
+                0,
+                -5,
+                0
+              ]
+            },
+            "0.9583": {
+              "vector": [
+                0,
+                -5,
+                0
+              ]
+            },
+            "1.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "scale": {
+            "0.0": {
+              "vector": [
+                1,
+                1,
+                1
+              ]
+            },
+            "0.4583": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.9583": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "1.5417": {
+              "vector": [
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "geckolib_format_version": 2
+}

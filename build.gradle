@@ -9,6 +9,7 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	mavenCentral()
 	maven {
 		name = 'GeckoLib'
 		url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
@@ -45,6 +46,13 @@ dependencies {
 
 	// GeckoLib for animated 3D cosmetic rendering
 	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.11:${project.geckolib_version}"
+
+	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {

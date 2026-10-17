@@ -1,0 +1,94 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.gamerRGBBoots",
+        "texture_width": 32,
+        "texture_height": 32,
+        "visible_bounds_width": 2,
+        "visible_bounds_height": 1.5,
+        "visible_bounds_offset": [
+          0,
+          0.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "anchor_leftleg",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "frame1",
+          "parent": "anchor_leftleg",
+          "pivot": [
+            1.9,
+            3.4,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -0.1,
+                -0.1,
+                -2
+              ],
+              "size": [
+                4,
+                7,
+                4
+              ],
+              "inflate": 0.1,
+              "uv": [
+                0,
+                21
+              ]
+            }
+          ]
+        },
+        {
+          "name": "anchor_rightleg",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "frame2",
+          "parent": "anchor_rightleg",
+          "pivot": [
+            -1.9,
+            3.4,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -3.9,
+                -0.1,
+                -2
+              ],
+              "size": [
+                4,
+                7,
+                4
+              ],
+              "inflate": 0.1,
+              "uv": [
+                0,
+                21
+              ],
+              "mirror": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

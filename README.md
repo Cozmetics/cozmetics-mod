@@ -11,18 +11,24 @@
 
 ## Features
 
-- **3D Animated Pets**: Shoulder-bound companions with continuous idle/movement animations, synchronized with the player model.
-- **Client-Side Safe Rendering**: Zero server footprint. Cosmetic render logic and GeckoLib pipelines are strictly isolated to the client environment, preventing dedicated server crashes.
+- **Reusable 3D Cosmetic Engine**: High-performance GeckoLib 5 rendering pipeline supporting static and animated models across 8 distinct categories:
+  - **Pets**: Animated companions hovering alongside the player (`Angel Pet`).
+  - **Wings**: Animated player-attached wings with multi-state animations (`Halloween Bat Wings V2`).
+  - **Auras**: Rotating, pulsing atmospheric particle rings (`Corrupted Aura`).
+  - **Back Accessories**: Animated scythes and back-mounted gear (`Medal Scythe`).
+  - **Boots**: Animated & static leg/foot accessories (`Gamer RGB Boots`).
+  - **Face Masks**: Synchronized headwear matching pitch and yaw (`Demon Crow Mask`).
+  - **Fists**: Arm-bound gauntlets and weapons moving with player arm swings (`Corrupted Fists`).
+  - **Headwear**: Skull-fitted crowns and hats with custom offsets & full-bright lighting (`Black Crown`).
+  - *(Capes reserved)*: Strictly disabled for future PiCapes integration.
+- **In-Game Wardrobe Menu**:
+  - Full-featured GUI accessible from the Pause menu (`✦ Cozmetics` button) or `CosmeticsScreen.open()`.
+  - Category navigation tabs across all enabled cosmetic types.
+  - Interactive live 3D player preview tracking cursor look angles and equipped cosmetics.
+  - Equip, unequip, and independent category visibility toggling.
+- **Persistent Preferences**: Local configuration saved to `config/cozmetics.json` persisting equipped selections and visibility states across restarts.
 - **Z-Fighting & Culling Protection**: Optimized cutout render passes preventing coplanar depth-fighting artifacts on 2D planes and thin model geometries.
-- **Extensible Architecture**: Modular foundation designed for future expansion across multiple cosmetic types:
-  - Pets
-  - Wings
-  - Auras
-  - Headwear
-  - Fists
-  - Boots
-  - Back accessories
-  - *(Capes reserved)*
+- **Client-Side Safe Rendering**: Zero server footprint. Cosmetic render logic and GeckoLib pipelines are strictly isolated to the client environment, preventing dedicated server crashes.
 
 ---
 

@@ -11,6 +11,7 @@ public class AngelPetCosmetic implements Cosmetic {
 	public static final Identifier MODEL_PATH = Cozmetics.id("cosmetics/pets/angel_pet");
 	public static final Identifier TEXTURE_PATH = Cozmetics.id("textures/cosmetics/pets/angel_pet.png");
 	public static final Identifier ANIMATION_PATH = Cozmetics.id("cosmetics/pets/angel_pet");
+	public static final String IDLE_ANIMATION = "animation.angelPet.idle";
 
 	@Override
 	public Identifier getId() {
@@ -46,5 +47,14 @@ public class AngelPetCosmetic implements Cosmetic {
 	public Identifier getAnimationPath() {
 		return ANIMATION_PATH;
 	}
-}
 
+	@Override
+	public String getIdleAnimationName() {
+		return IDLE_ANIMATION;
+	}
+
+	@Override
+	public AttachmentSlot getAttachmentSlot() {
+		return AttachmentSlot.PET;
+	}
+}

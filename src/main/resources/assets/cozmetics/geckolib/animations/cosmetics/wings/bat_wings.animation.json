@@ -1,0 +1,526 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.halloween2024BatWingsV2.idle": {
+      "loop": true,
+      "animation_length": 3,
+      "bones": {
+        "wing1": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "1.625": {
+              "vector": [
+                0,
+                -35,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "3.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "bone": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "1.75": {
+              "vector": [
+                0,
+                -52.5,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "3.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "wing2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "1.625": {
+              "vector": [
+                0,
+                35,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "3.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "bone2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "1.75": {
+              "vector": [
+                0,
+                52.5,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "3.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        }
+      }
+    },
+    "animation.halloween2024BatWingsV2.walk": {
+      "loop": true,
+      "animation_length": 1.3333,
+      "bones": {
+        "wing1": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.6667": {
+              "vector": [
+                0,
+                -35,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.3333": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "bone": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7917": {
+              "vector": [
+                0,
+                -52.5,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.3333": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "wing2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.6667": {
+              "vector": [
+                0,
+                35,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.3333": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "bone2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.7917": {
+              "vector": [
+                0,
+                52.5,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.3333": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        }
+      }
+    },
+    "animation.halloween2024BatWingsV2.fly": {
+      "loop": true,
+      "animation_length": 0.5417,
+      "bones": {
+        "wing1": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.1667": {
+              "vector": [
+                0,
+                -36,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.3333": {
+              "vector": [
+                0,
+                24,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeInSine"
+            }
+          }
+        },
+        "bone": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.2083": {
+              "vector": [
+                0,
+                -44,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.4167": {
+              "vector": [
+                0,
+                29,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "wing2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.1667": {
+              "vector": [
+                0,
+                36,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.3333": {
+              "vector": [
+                0,
+                -24,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeInSine"
+            }
+          }
+        },
+        "bone2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.2083": {
+              "vector": [
+                0,
+                44,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.4167": {
+              "vector": [
+                0,
+                -29,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.5417": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        }
+      }
+    },
+    "animation.halloween2024BatWingsV2.swim": {
+      "loop": true,
+      "animation_length": 1,
+      "bones": {
+        "wing1": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.3333": {
+              "vector": [
+                0,
+                -36,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.6667": {
+              "vector": [
+                0,
+                24,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeInSine"
+            }
+          }
+        },
+        "bone": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.375": {
+              "vector": [
+                0,
+                -44,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.75": {
+              "vector": [
+                0,
+                29,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        },
+        "wing2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.3333": {
+              "vector": [
+                0,
+                36,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.6667": {
+              "vector": [
+                0,
+                -24,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeInSine"
+            }
+          }
+        },
+        "bone2": {
+          "rotation": {
+            "0.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ]
+            },
+            "0.375": {
+              "vector": [
+                0,
+                44,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "0.75": {
+              "vector": [
+                0,
+                -29,
+                0
+              ],
+              "easing": "easeOutSine"
+            },
+            "1.0": {
+              "vector": [
+                0,
+                0,
+                0
+              ],
+              "easing": "easeOutSine"
+            }
+          }
+        }
+      }
+    }
+  },
+  "geckolib_format_version": 2
+}
