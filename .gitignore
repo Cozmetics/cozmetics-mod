@@ -1,1 +1,25 @@
+# Gradle
+.gradle/
+build/
+
+# Fabric / Minecraft run directory
+run/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Raw asset source files
 assets-desgins/

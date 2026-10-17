@@ -11,7 +11,7 @@ on:
       java_version:
         description: Java version
         required: true
-        default: "21"
+        default: "25"
         type: choice
         options:
           - "17"
@@ -130,7 +130,13 @@ jobs:
           printf 'Exact source commit: %s\n' "$source_commit"
           printf 'Workflow event ref: %s\n' "$EVENT_REF"
 
-      - name: Set up Java
+      - name: Set up Java 21 (Mod Compilation Toolchain)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Java ${{ inputs.java_version }} (Gradle / Loom Runtime)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
