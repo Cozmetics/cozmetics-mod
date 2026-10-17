@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"io.github.itsarcn.cozmetics.client.CozmeticsClient"
+		],
+		"modmenu": [
+			"io.github.itsarcn.cozmetics.client.compat.modmenu.CozmeticsModMenuImpl"
 		]
 	},
 	"mixins": [

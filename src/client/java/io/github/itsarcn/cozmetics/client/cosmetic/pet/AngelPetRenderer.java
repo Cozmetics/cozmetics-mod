@@ -28,6 +28,12 @@ public class AngelPetRenderer extends GeoObjectRenderer<AngelPetAnimatable, Play
 	}
 
 	@Override
+	public void addRenderData(AngelPetAnimatable animatable, @Nullable PlayerEntityRenderState relatedObject, GeoRenderState renderState, float partialTick) {
+		double realTimeTick = (System.currentTimeMillis() % 100000000L) / 50.0;
+		renderState.addGeckolibData(software.bernie.geckolib.constant.DataTickets.TICK, realTimeTick);
+	}
+
+	@Override
 	public @Nullable RenderLayer getRenderType(GeoRenderState renderState, Identifier texture) {
 		// Use entityCutout (with backface culling enabled) instead of entityCutoutNoCull.
 		// The 2D wing cubes have thickness 0 and define both north and south faces on the exact same plane;

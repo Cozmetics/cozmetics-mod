@@ -35,12 +35,13 @@ public class CosmeticFeatureRenderer extends FeatureRenderer<PlayerEntityRenderS
 				continue;
 			}
 
-			if (!manager.isCategoryVisible(category)) {
+			Cosmetic equipped = manager.getEquipped(category);
+			if (equipped == null) {
 				continue;
 			}
 
-			Cosmetic equipped = manager.getEquipped(category);
-			if (equipped == null) {
+			// Item-level visibility check: toggleable in the wardrobe screen without unequipping
+			if (!manager.isCosmeticVisible(equipped.getId())) {
 				continue;
 			}
 

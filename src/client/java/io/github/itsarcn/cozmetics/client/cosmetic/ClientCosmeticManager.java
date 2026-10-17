@@ -9,19 +9,23 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Identifier;
 
 import java.nio.file.Path;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
- * Client-side manager keeping track of equipped cosmetics and category visibility
+ * Client-side manager keeping track of equipped cosmetics and item visibility
  * for the local player. Automatically saves preferences to disk and restores them
  * on game launch.
+ *
+ * Equipped state represents what cosmetics the user owns/has selected (eventually
+ * synchronized from the website/backend).
+ * Visibility state represents local client toggles to show/hide equipped cosmetics
+ * during rendering without altering equipped data.
  */
 public class ClientCosmeticManager {
 	private static final ClientCosmeticManager INSTANCE = new ClientCosmeticManager();
 	private final Path configFile;
 	private final Map<CosmeticCategory, Cosmetic> equippedCosmetics = new EnumMap<>(CosmeticCategory.class);
+	private final Set<Identifier> hiddenCosmetics = new HashSet<>();
 	private final Map<CosmeticCategory, Boolean> categoryVisibility = new EnumMap<>(CosmeticCategory.class);
 
 	private ClientCosmeticManager() {
@@ -39,10 +43,21 @@ public class ClientCosmeticManager {
 	public synchronized void reload() {
 		this.equippedCosmetics.clear();
 		this.categoryVisibility.clear();
+		this.hiddenCosmetics.clear();
 
 		CosmeticConfig config = CosmeticConfig.load(this.configFile);
 
-		// Restore category visibility
+		// Restore hidden cosmetics
+		if (config.hiddenCosmetics != null) {
+			for (String idStr : config.hiddenCosmetics) {
+				try {
+					this.hiddenCosmetics.add(Identifier.of(idStr));
+				} catch (Exception ignored) {
+				}
+			}
+		}
+
+		// Restore category visibility (legacy)
 		for (CosmeticCategory category : CosmeticCategory.values()) {
 			if (!category.isEnabled()) {
 				continue;
@@ -73,9 +88,18 @@ public class ClientCosmeticManager {
 			}
 		}
 
-		// If nothing was equipped for PET (e.g. first run), ensure default Angel Pet is equipped
-		if (!this.equippedCosmetics.containsKey(CosmeticCategory.PET) && CosmeticCategory.PET.isEnabled()) {
-			this.equippedCosmetics.put(CosmeticCategory.PET, CosmeticRegistry.ANGEL_PET);
+		// For local development testing: ensure enabled categories have sample cosmetics equipped
+		boolean populatedMissing = false;
+		for (CosmeticCategory cat : CosmeticCategory.values()) {
+			if (cat.isEnabled() && !this.equippedCosmetics.containsKey(cat)) {
+				List<Cosmetic> list = CosmeticRegistry.getByCategory(cat);
+				if (!list.isEmpty()) {
+					this.equippedCosmetics.put(cat, list.getFirst());
+					populatedMissing = true;
+				}
+			}
+		}
+		if (populatedMissing) {
 			save();
 		}
 	}
@@ -95,7 +119,71 @@ public class ClientCosmeticManager {
 				config.visibility.put(entry.getKey().name(), entry.getValue());
 			}
 		}
+		for (Identifier id : this.hiddenCosmetics) {
+			config.hiddenCosmetics.add(id.toString());
+		}
 		config.save(this.configFile);
+	}
+
+	public synchronized boolean isCosmeticVisible(Identifier id) {
+		return !this.hiddenCosmetics.contains(id);
+	}
+
+	public synchronized boolean isCosmeticVisible(Cosmetic cosmetic) {
+		return cosmetic != null && isCosmeticVisible(cosmetic.getId());
+	}
+
+	public synchronized void setCosmeticVisible(Identifier id, boolean visible) {
+		if (visible) {
+			this.hiddenCosmetics.remove(id);
+		} else {
+			this.hiddenCosmetics.add(id);
+		}
+		save();
+	}
+
+	public synchronized void toggleCosmeticVisible(Identifier id) {
+		setCosmeticVisible(id, !isCosmeticVisible(id));
+	}
+
+	public synchronized void showAll() {
+		this.hiddenCosmetics.clear();
+		save();
+	}
+
+	public synchronized void hideAll() {
+		for (Cosmetic c : getAllEquipped()) {
+			this.hiddenCosmetics.add(c.getId());
+		}
+		save();
+	}
+
+	public synchronized void solo(Identifier id) {
+		boolean onlyThisVisible = isCosmeticVisible(id)
+				&& getAllEquipped().stream().filter(this::isCosmeticVisible).count() == 1;
+		if (onlyThisVisible) {
+			showAll();
+			return;
+		}
+
+		this.hiddenCosmetics.clear();
+		for (Cosmetic c : getAllEquipped()) {
+			if (!c.getId().equals(id)) {
+				this.hiddenCosmetics.add(c.getId());
+			}
+		}
+		save();
+	}
+
+	public synchronized List<Cosmetic> getAllEquipped() {
+		List<Cosmetic> list = new ArrayList<>();
+		for (CosmeticCategory cat : CosmeticCategory.values()) {
+			Cosmetic c = this.equippedCosmetics.get(cat);
+			if (c != null && cat.isEnabled()) {
+				list.add(c);
+			}
+		}
+		return list;
 	}
 
 	public synchronized void equip(Cosmetic cosmetic) {

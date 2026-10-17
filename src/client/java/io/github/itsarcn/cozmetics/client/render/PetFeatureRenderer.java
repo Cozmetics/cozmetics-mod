@@ -28,7 +28,7 @@ public class PetFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState,
 		}
 
 		Cosmetic equippedPet = ClientCosmeticManager.getInstance().getEquipped(CosmeticCategory.PET);
-		if (equippedPet == null) {
+		if (equippedPet == null || !ClientCosmeticManager.getInstance().isCosmeticVisible(equippedPet.getId())) {
 			return;
 		}
 

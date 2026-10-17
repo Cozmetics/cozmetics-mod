@@ -12,6 +12,8 @@ public record CosmeticDefinition(
 		String name,
 		Identifier modelPath,
 		Identifier texturePath,
+		int textureFrameCount,
+		int textureFrameDurationMs,
 		@Nullable Identifier animationPath,
 		@Nullable String idleAnimationName,
 		AttachmentSlot attachmentSlot,
@@ -44,6 +46,16 @@ public record CosmeticDefinition(
 	}
 
 	@Override
+	public int getTextureFrameCount() {
+		return textureFrameCount;
+	}
+
+	@Override
+	public int getTextureFrameDurationMs() {
+		return textureFrameDurationMs;
+	}
+
+	@Override
 	public @Nullable Identifier getAnimationPath() {
 		return animationPath;
 	}
@@ -73,6 +85,8 @@ public record CosmeticDefinition(
 		private final String name;
 		private Identifier modelPath;
 		private Identifier texturePath;
+		private int textureFrameCount = 1;
+		private int textureFrameDurationMs = 100;
 		private Identifier animationPath;
 		private String idleAnimationName;
 		private AttachmentSlot attachmentSlot;
@@ -91,6 +105,12 @@ public record CosmeticDefinition(
 
 		public Builder texture(Identifier texturePath) {
 			this.texturePath = texturePath;
+			return this;
+		}
+
+		public Builder textureFrames(int frameCount, int durationMs) {
+			this.textureFrameCount = frameCount;
+			this.textureFrameDurationMs = durationMs;
 			return this;
 		}
 
@@ -121,9 +141,9 @@ public record CosmeticDefinition(
 			};
 			return new CosmeticDefinition(
 					id, category, name, modelPath, texturePath,
+					textureFrameCount, textureFrameDurationMs,
 					animationPath, idleAnimationName, resolvedSlot, transform
 			);
 		}
 	}
 }
-

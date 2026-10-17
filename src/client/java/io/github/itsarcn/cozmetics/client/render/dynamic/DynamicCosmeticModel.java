@@ -22,6 +22,10 @@ public class DynamicCosmeticModel extends GeoModel<DynamicCosmeticAnimatable> {
 
 	@Override
 	public Identifier getTextureResource(GeoRenderState renderState) {
+		if (this.cosmetic.getTextureFrameCount() > 1) {
+			int frame = (int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount());
+			return this.cosmetic.getTexturePath(frame);
+		}
 		return this.cosmetic.getTexturePath();
 	}
 

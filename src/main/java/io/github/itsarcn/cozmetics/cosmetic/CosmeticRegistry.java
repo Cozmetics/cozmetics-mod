@@ -35,6 +35,7 @@ public final class CosmeticRegistry {
 	)
 			.model(Cozmetics.id("cosmetics/auras/corrupted_aura"))
 			.texture(Cozmetics.id("textures/cosmetics/auras/corrupted_aura.png"))
+			.textureFrames(3, 100)
 			.animation(Cozmetics.id("cosmetics/auras/corrupted_aura"), "animation.beenTakenCorruptedAura.idle")
 			.slot(AttachmentSlot.BODY)
 			.build());
@@ -47,6 +48,7 @@ public final class CosmeticRegistry {
 	)
 			.model(Cozmetics.id("cosmetics/back/medal_scythe"))
 			.texture(Cozmetics.id("textures/cosmetics/back/medal_scythe.png"))
+			.textureFrames(11, 100)
 			.animation(Cozmetics.id("cosmetics/back/medal_scythe"), "animation.medalScythe.idle")
 			.slot(AttachmentSlot.BODY)
 			.build());
@@ -59,6 +61,7 @@ public final class CosmeticRegistry {
 	)
 			.model(Cozmetics.id("cosmetics/boots/gamer_rgb_boots"))
 			.texture(Cozmetics.id("textures/cosmetics/boots/gamer_rgb_boots.png"))
+			.textureFrames(8, 100)
 			.slot(AttachmentSlot.LEGS)
 			.build());
 
@@ -81,6 +84,7 @@ public final class CosmeticRegistry {
 	)
 			.model(Cozmetics.id("cosmetics/fists/corrupted_fists"))
 			.texture(Cozmetics.id("textures/cosmetics/fists/corrupted_fists.png"))
+			.textureFrames(8, 100)
 			.slot(AttachmentSlot.ARMS)
 			.build());
 
@@ -93,7 +97,7 @@ public final class CosmeticRegistry {
 			.model(Cozmetics.id("cosmetics/headwear/black_crown"))
 			.texture(Cozmetics.id("textures/cosmetics/headwear/black_crown.png"))
 			.slot(AttachmentSlot.HEAD)
-			.transform(new AttachmentTransform(3.3f, 1.0f, true))
+			.transform(new AttachmentTransform(0.0f, 1.0f, true))
 			.build());
 
 	public static <T extends Cosmetic> T register(T cosmetic) {

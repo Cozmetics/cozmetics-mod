@@ -2,37 +2,50 @@ package io.github.itsarcn.cozmetics.client.gui;
 
 import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
-import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
-import io.github.itsarcn.cozmetics.cosmetic.CosmeticRegistry;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.render.entity.model.BipedEntityModel;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.util.DefaultSkinHelper;
+import net.minecraft.entity.player.SkinTextures;
 import net.minecraft.text.Text;
+import net.minecraft.util.Arm;
+import net.minecraft.util.Identifier;
 import org.jspecify.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * In-game Wardrobe screen for previewing, equipping, and managing cosmetics.
+ * Dedicated Cozmetics Wardrobe Screen.
+ *
+ * Focuses on a large, interactive 3D character preview displaying equipped cosmetics.
+ * Equipped selection is managed externally (by website/backend); this screen solely
+ * controls local rendering visibility (Show/Hide/Solo) for equipped cosmetics.
  */
 public class CosmeticsScreen extends Screen {
 	private final Screen parent;
-	private CosmeticCategory activeCategory = CosmeticCategory.PET;
-	private @Nullable Cosmetic selectedCosmetic = null;
 
-	private CosmeticListWidget listWidget;
-	private ButtonWidget equipButton;
-	private ButtonWidget visibilityButton;
-	private final List<ButtonWidget> categoryTabButtons = new ArrayList<>();
+	private EquippedCosmeticListWidget listWidget;
 
-	private float previewRotation = 0.0f;
+	// 3D Orbital Rotation (Yaw + Pitch) and Zoom
+	private float previewRotationYaw = 0.0f;
+	private float previewRotationPitch = 0.0f;
+	private float previewZoom = 1.0f;
 	private boolean draggingPreview = false;
 	private double lastMouseX = 0;
+	private double lastMouseY = 0;
+
+	private int previewLeft;
+	private int previewTop;
+	private int previewRight;
+	private int previewBottom;
 
 	public CosmeticsScreen(@Nullable Screen parent) {
 		super(Text.literal("Cozmetics Wardrobe"));
@@ -45,119 +58,57 @@ public class CosmeticsScreen extends Screen {
 
 	@Override
 	protected void init() {
-		this.categoryTabButtons.clear();
+		// Wider, more readable side menu (220-240px)
+		int rightPanelWidth = Math.min(235, Math.max(215, (int) (this.width * 0.38f)));
+		this.previewLeft = 14;
+		this.previewTop = 32;
+		this.previewRight = this.width - rightPanelWidth - 14;
+		this.previewBottom = this.height - 14;
 
-		// 1. Category Tabs at top (y = 20)
-		List<CosmeticCategory> enabledCategories = new ArrayList<>();
-		for (CosmeticCategory cat : CosmeticCategory.values()) {
-			if (cat.isEnabled()) {
-				enabledCategories.add(cat);
-			}
-		}
+		int rightPanelX = this.previewRight + 10;
 
-		int tabHeight = 18;
-		int totalTabsWidth = enabledCategories.size() * 46;
-		int startTabX = Math.max(10, (this.width - totalTabsWidth) / 2);
+		// 1. Quick Action Header Buttons: [ Show All ] and [ Hide All ]
+		int topButtonWidth = (rightPanelWidth - 4) / 2;
+		ButtonWidget showAllBtn = ButtonWidget.builder(Text.literal("Show All"), btn -> showAll())
+				.dimensions(rightPanelX, 32, topButtonWidth, 20)
+				.build();
+		addDrawableChild(showAllBtn);
 
-		for (int i = 0; i < enabledCategories.size(); i++) {
-			CosmeticCategory cat = enabledCategories.get(i);
-			int btnX = startTabX + i * 46;
-			ButtonWidget tabBtn = ButtonWidget.builder(Text.literal(cat.getDisplayName()), btn -> selectCategory(cat))
-					.dimensions(btnX, 22, 44, tabHeight)
-					.build();
-			this.categoryTabButtons.add(tabBtn);
-			addDrawableChild(tabBtn);
-		}
+		ButtonWidget hideAllBtn = ButtonWidget.builder(Text.literal("Hide All"), btn -> hideAll())
+				.dimensions(rightPanelX + topButtonWidth + 4, 32, topButtonWidth, 20)
+				.build();
+		addDrawableChild(hideAllBtn);
 
-		// 2. Middle: Cosmetic List Widget
-		int listX = 140;
-		int listY = 46;
-		int listWidth = Math.max(150, (this.width - 150) / 2);
-		int listHeight = this.height - 85;
+		// 2. Equipped Cosmetics List Widget - maximized vertical space
+		int listTop = 56;
+		int doneButtonHeight = 20;
+		int doneButtonY = this.height - 14 - doneButtonHeight;
+		int listHeight = Math.max(60, doneButtonY - listTop - 6);
 
-		this.listWidget = new CosmeticListWidget(this.client, listWidth, listHeight, listY, 28);
-		this.listWidget.setDimensionsAndPosition(listWidth, listHeight, listX, listY);
+		this.listWidget = new EquippedCosmeticListWidget(
+				this.client,
+				rightPanelWidth,
+				listHeight,
+				listTop,
+				32
+		);
+		this.listWidget.setDimensionsAndPosition(rightPanelWidth, listHeight, rightPanelX, listTop);
 		addDrawableChild(this.listWidget);
+		this.listWidget.refresh();
 
-		// 3. Right: Action Controls (Equip/Unequip, Visibility toggle, Close)
-		int rightPanelX = listX + listWidth + 12;
-		int rightPanelWidth = Math.max(100, this.width - rightPanelX - 16);
-		int actionsY = this.height - 76;
-
-		this.equipButton = ButtonWidget.builder(Text.literal("Equip"), btn -> toggleEquipSelected())
-				.dimensions(rightPanelX, actionsY, rightPanelWidth, 20)
-				.build();
-		addDrawableChild(this.equipButton);
-
-		this.visibilityButton = ButtonWidget.builder(Text.literal("Visibility"), btn -> toggleCategoryVisibility())
-				.dimensions(rightPanelX, actionsY + 24, rightPanelWidth, 20)
-				.build();
-		addDrawableChild(this.visibilityButton);
-
+		// 3. Clean Done button at bottom of panel
 		ButtonWidget doneButton = ButtonWidget.builder(Text.literal("Done"), btn -> close())
-				.dimensions(rightPanelX, actionsY + 48, rightPanelWidth, 20)
+				.dimensions(rightPanelX, doneButtonY, rightPanelWidth, doneButtonHeight)
 				.build();
 		addDrawableChild(doneButton);
-
-		// Populate active category
-		selectCategory(this.activeCategory);
 	}
 
-	public void selectCategory(CosmeticCategory category) {
-		this.activeCategory = category;
-		for (ButtonWidget btn : this.categoryTabButtons) {
-			btn.active = !btn.getMessage().getString().equalsIgnoreCase(category.getDisplayName());
-		}
-
-		this.listWidget.populateCategory(category);
-
-		// Select current equipped if available, or first in category
-		Cosmetic equipped = ClientCosmeticManager.getInstance().getEquipped(category);
-		if (equipped != null) {
-			setSelectedCosmetic(equipped);
-		} else {
-			List<Cosmetic> list = CosmeticRegistry.getByCategory(category);
-			setSelectedCosmetic(!list.isEmpty() ? list.getFirst() : null);
-		}
+	private void showAll() {
+		ClientCosmeticManager.getInstance().showAll();
 	}
 
-	public void setSelectedCosmetic(@Nullable Cosmetic cosmetic) {
-		this.selectedCosmetic = cosmetic;
-		this.listWidget.selectCosmetic(cosmetic);
-		updateButtons();
-	}
-
-	private void updateButtons() {
-		ClientCosmeticManager manager = ClientCosmeticManager.getInstance();
-		boolean isVisible = manager.isCategoryVisible(this.activeCategory);
-		this.visibilityButton.setMessage(Text.literal(isVisible ? "Category: Visible" : "Category: Hidden"));
-
-		if (this.selectedCosmetic == null) {
-			this.equipButton.setMessage(Text.literal("Equip"));
-			this.equipButton.active = false;
-		} else {
-			Cosmetic equipped = manager.getEquipped(this.activeCategory);
-			boolean isEquipped = equipped != null && equipped.getId().equals(this.selectedCosmetic.getId());
-			this.equipButton.setMessage(Text.literal(isEquipped ? "Unequip" : "Equip"));
-			this.equipButton.active = true;
-		}
-	}
-
-	private void toggleEquipSelected() {
-		if (this.selectedCosmetic == null) return;
-		ClientCosmeticManager manager = ClientCosmeticManager.getInstance();
-		Cosmetic equipped = manager.getEquipped(this.activeCategory);
-		if (equipped != null && equipped.getId().equals(this.selectedCosmetic.getId())) {
-			manager.unequip(this.activeCategory);
-		} else {
-			manager.equip(this.selectedCosmetic);
-		}
-		updateButtons();
-	}
-
-	private void toggleCategoryVisibility() {
-		ClientCosmeticManager.getInstance().toggleCategoryVisible(this.activeCategory);
-		updateButtons();
+	private void hideAll() {
+		ClientCosmeticManager.getInstance().hideAll();
 	}
 
 	@Override
@@ -169,82 +120,139 @@ public class CosmeticsScreen extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		// 1. Draw Title
-		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
+		// 1. Draw Title and Subtitle with solid alpha (0xFF)
+		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFFA0);
+		context.drawCenteredTextWithShadow(
+				this.textRenderer,
+				Text.literal("Drag to orbit 360° • Scroll to zoom • Click cosmetic to toggle"),
+				this.width / 2,
+				20,
+				0xFF888888
+		);
 
-		// 2. Draw Player Character Preview on Left
-		int previewLeft = 14;
-		int previewTop = 46;
-		int previewWidth = 114;
-		int previewHeight = this.height - 85;
+		// 2. Draw Large Player Character Preview Area
+		int previewWidth = this.previewRight - this.previewLeft;
+		int previewHeight = this.previewBottom - this.previewTop;
 
-		// Preview background box
-		context.fill(previewLeft, previewTop, previewLeft + previewWidth, previewTop + previewHeight, 0x55000000);
-		context.drawStrokedRectangle(previewLeft, previewTop, previewWidth, previewHeight, 0x88AAAAAA);
+		// Preview background container
+		context.fill(this.previewLeft, this.previewTop, this.previewRight, this.previewBottom, 0x55000000);
+		context.drawStrokedRectangle(this.previewLeft, this.previewTop, previewWidth, previewHeight, 0x44AAAAAA);
+
+		// Preview badges & hints (solid alpha 0xFF)
+		context.drawTextWithShadow(
+				this.textRenderer,
+				Text.literal("Player Preview"),
+				this.previewLeft + 8,
+				this.previewTop + 8,
+				0xFFBBBBBB
+		);
+		context.drawTextWithShadow(
+				this.textRenderer,
+				Text.literal("◀ 360° Orbit (Drag to rotate) ▶"),
+				this.previewLeft + 8,
+				this.previewBottom - 16,
+				0xFF666666
+		);
+
+		// Render Player Character & Equipped Animated Cosmetics
+		renderPlayerPreview(context, delta);
+
+		// 3. Render Child Widgets (Equipped Cosmetics List and Buttons)
+		super.render(context, mouseX, mouseY, delta);
+	}
+
+	private void renderPlayerPreview(DrawContext context, float delta) {
+		PlayerEntityRenderState state = getOrCreateRenderState(delta);
+		if (state == null) {
+			return;
+		}
+
+		int previewHeight = this.previewBottom - this.previewTop;
+		int baseSize = (int) (previewHeight / 3.25f);
+		int previewSize = Math.max(30, Math.min(85, (int) (baseSize * this.previewZoom)));
+
+		// Full 360-degree rotation: Pitch (vertical tilt) + Yaw (horizontal orbit)
+		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+		rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
+		rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
+
+		Vector3f offset = new Vector3f(0.0F, state.height / 2.0F - 0.05F, 0.0F);
+
+		context.addEntity(
+				state,
+				(float) previewSize,
+				offset,
+				rotation,
+				new Quaternionf(),
+				this.previewLeft + 2,
+				this.previewTop + 2,
+				this.previewRight - 2,
+				this.previewBottom - 2
+		);
+	}
+
+	private PlayerEntityRenderState getOrCreateRenderState(float delta) {
+		PlayerEntityRenderState state = null;
 
 		if (this.client != null && this.client.player != null) {
-			int previewCenterX = previewLeft + previewWidth / 2;
-			int previewBottomY = previewTop + previewHeight - 12;
-			int previewSize = Math.max(30, Math.min(60, previewHeight / 4));
-
-			// Auto rotate slowly if not dragging
-			if (!this.draggingPreview) {
-				this.previewRotation += delta * 0.8f;
+			try {
+				var renderer = this.client.getEntityRenderDispatcher().getRenderer(this.client.player);
+				if (renderer != null) {
+					state = (PlayerEntityRenderState) renderer.getAndUpdateRenderState(this.client.player, delta);
+				}
+			} catch (Exception ignored) {
+				state = null;
 			}
-
-			// Render live player with cosmetics
-			InventoryScreen.drawEntity(
-					context,
-					previewLeft + 4,
-					previewTop + 4,
-					previewLeft + previewWidth - 4,
-					previewTop + previewHeight - 4,
-					previewSize,
-					0.0625f,
-					(float) mouseX,
-					(float) mouseY,
-					this.client.player
-			);
 		}
 
-		// Preview label
-		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Player Preview"), previewLeft + previewWidth / 2, previewTop + 6, 0xAAAAAA);
-
-		// 3. Render cosmetic list & widgets
-		super.render(context, mouseX, mouseY, delta);
-
-		// 4. Render selected cosmetic details panel on right
-		int listWidth = this.listWidget.getWidth();
-		int rightPanelX = this.listWidget.getX() + listWidth + 12;
-		int rightPanelTop = 46;
-
-		context.drawTextWithShadow(this.textRenderer, Text.literal("§lCosmetic Details:"), rightPanelX, rightPanelTop, 0xFFAAFF);
-
-		if (this.selectedCosmetic != null) {
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§f" + this.selectedCosmetic.getName()), rightPanelX, rightPanelTop + 16, 0xFFFFFF);
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§7Category: §e" + this.selectedCosmetic.getCategory().getDisplayName()), rightPanelX, rightPanelTop + 30, 0xCCCCCC);
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§7Type: " + (this.selectedCosmetic.isAnimated() ? "§bAnimated" : "§7Static")), rightPanelX, rightPanelTop + 44, 0xCCCCCC);
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§7Slot: §a" + this.selectedCosmetic.getAttachmentSlot()), rightPanelX, rightPanelTop + 58, 0xCCCCCC);
-
-			Cosmetic equipped = ClientCosmeticManager.getInstance().getEquipped(this.activeCategory);
-			boolean isEquipped = equipped != null && equipped.getId().equals(this.selectedCosmetic.getId());
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§7Status: " + (isEquipped ? "§a§lEquipped" : "§cUnequipped")), rightPanelX, rightPanelTop + 72, 0xFFFFFF);
-		} else {
-			context.drawTextWithShadow(this.textRenderer, Text.literal("§8No cosmetic selected"), rightPanelX, rightPanelTop + 20, 0x888888);
+		if (state == null) {
+			state = new PlayerEntityRenderState();
+			SkinTextures skin = null;
+			try {
+				if (this.client != null && this.client.getGameProfile() != null) {
+					skin = this.client.getSkinProvider().supplySkinTextures(this.client.getGameProfile(), true).get();
+				}
+			} catch (Exception ignored) {
+			}
+			if (skin == null) {
+				skin = DefaultSkinHelper.getSteve();
+			}
+			state.skinTextures = skin;
+			state.width = 0.6f;
+			state.height = 1.8f;
+			state.baseScale = 1.0f;
+			state.standingEyeHeight = 1.62f;
+			state.hatVisible = true;
+			state.jacketVisible = true;
+			state.leftPantsLegVisible = true;
+			state.rightPantsLegVisible = true;
+			state.leftSleeveVisible = true;
+			state.rightSleeveVisible = true;
+			state.leftArmPose = BipedEntityModel.ArmPose.EMPTY;
+			state.rightArmPose = BipedEntityModel.ArmPose.EMPTY;
+			state.preferredArm = Arm.RIGHT;
 		}
+
+		// Ensure age advances smoothly in real time even when singleplayer is paused in GUI
+		state.age = (System.currentTimeMillis() % 100000000L) / 50.0f;
+
+		// Stable preview pose
+		state.bodyYaw = 180.0f;
+		state.relativeHeadYaw = 0.0f;
+		state.pitch = 0.0f;
+		state.light = 0x00F000F0;
+		state.shadowPieces.clear();
+		state.outlineColor = 0;
+		return state;
 	}
 
 	@Override
 	public boolean mouseClicked(Click click, boolean bl) {
-		int previewLeft = 14;
-		int previewTop = 46;
-		int previewWidth = 114;
-		int previewHeight = this.height - 85;
-
-		if (click.x() >= previewLeft && click.x() <= previewLeft + previewWidth
-				&& click.y() >= previewTop && click.y() <= previewTop + previewHeight) {
+		if (click.x() >= this.previewLeft && click.x() <= this.previewRight
+				&& click.y() >= this.previewTop && click.y() <= this.previewBottom) {
 			this.draggingPreview = true;
 			this.lastMouseX = click.x();
+			this.lastMouseY = click.y();
 			return true;
 		}
 
@@ -260,45 +268,46 @@ public class CosmeticsScreen extends Screen {
 	@Override
 	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
 		if (this.draggingPreview) {
-			this.previewRotation += (float) (click.x() - this.lastMouseX) * 1.5f;
+			// Controlled, smooth rotation sensitivity (0.4f per pixel)
+			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 0.4f;
+			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.4f));
 			this.lastMouseX = click.x();
+			this.lastMouseY = click.y();
 			return true;
 		}
 		return super.mouseDragged(click, deltaX, deltaY);
 	}
 
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+		if (mouseX >= this.previewLeft && mouseX <= this.previewRight
+				&& mouseY >= this.previewTop && mouseY <= this.previewBottom) {
+			this.previewZoom = (float) Math.max(0.65, Math.min(1.5, this.previewZoom + verticalAmount * 0.08));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+	}
+
 	/**
-	 * List widget displaying cosmetics of the active category.
+	 * Compact list widget displaying currently equipped cosmetics with direct toggles & thumbnails.
 	 */
-	public class CosmeticListWidget extends AlwaysSelectedEntryListWidget<CosmeticListWidget.CosmeticEntry> {
-		public CosmeticListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
+	public class EquippedCosmeticListWidget extends AlwaysSelectedEntryListWidget<EquippedCosmeticListWidget.Entry> {
+		public EquippedCosmeticListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
 			super(client, width, height, y, itemHeight);
 		}
 
-		public void populateCategory(CosmeticCategory category) {
+		public void refresh() {
 			clearEntries();
-			for (Cosmetic cosmetic : CosmeticRegistry.getByCategory(category)) {
-				addEntry(new CosmeticEntry(cosmetic));
+			List<Cosmetic> equipped = ClientCosmeticManager.getInstance().getAllEquipped();
+			for (Cosmetic cosmetic : equipped) {
+				addEntry(new Entry(cosmetic));
 			}
 		}
 
-		public void selectCosmetic(@Nullable Cosmetic cosmetic) {
-			if (cosmetic == null) {
-				setSelected(null);
-				return;
-			}
-			for (CosmeticEntry entry : children()) {
-				if (entry.cosmetic.getId().equals(cosmetic.getId())) {
-					setSelected(entry);
-					return;
-				}
-			}
-		}
-
-		public class CosmeticEntry extends AlwaysSelectedEntryListWidget.Entry<CosmeticEntry> {
+		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
 			private final Cosmetic cosmetic;
 
-			public CosmeticEntry(Cosmetic cosmetic) {
+			public Entry(Cosmetic cosmetic) {
 				this.cosmetic = cosmetic;
 			}
 
@@ -309,39 +318,111 @@ public class CosmeticsScreen extends Screen {
 
 			@Override
 			public void render(DrawContext context, int y, int x, boolean hovered, float tickProgress) {
-				int entryX = getContentX();
-				int entryY = getContentY();
-				int entryWidth = getContentWidth();
-				int entryHeight = getContentHeight();
+				int entryX = getX();
+				int entryY = getY();
+				int entryWidth = getWidth();
+				int entryHeight = getHeight();
 
-				boolean isSelected = CosmeticsScreen.this.selectedCosmetic != null
-						&& CosmeticsScreen.this.selectedCosmetic.getId().equals(this.cosmetic.getId());
+				boolean isSelected = EquippedCosmeticListWidget.this.getSelectedOrNull() == this;
+				boolean isVisible = ClientCosmeticManager.getInstance().isCosmeticVisible(this.cosmetic.getId());
 
+				// Row hover and active highlights
 				if (isSelected) {
-					context.fill(entryX - 2, entryY - 1, entryX + entryWidth + 2, entryY + entryHeight + 1, 0x80335577);
+					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x40335577);
 				} else if (hovered) {
-					context.fill(entryX - 2, entryY - 1, entryX + entryWidth + 2, entryY + entryHeight + 1, 0x40333333);
+					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x25FFFFFF);
 				}
 
-				boolean isEquipped = ClientCosmeticManager.getInstance().getEquipped(this.cosmetic.getCategory()) == this.cosmetic;
+				// 1. Interactive Checkbox at [entryX + 4, entryY + 8], size 14x14
+				int checkX = entryX + 4;
+				int checkY = entryY + 8;
+				int checkSize = 14;
 
-				// Name
-				context.drawTextWithShadow(textRenderer, Text.literal(this.cosmetic.getName()), entryX + 2, entryY + 2, isSelected ? 0xFFFFA0 : 0xFFFFFF);
-
-				// Badges
-				String badge = this.cosmetic.isAnimated() ? "§b[ANIM]" : "§7[STATIC]";
-				if (isEquipped) {
-					badge += " §a[EQUIPPED]";
+				context.fill(checkX, checkY, checkX + checkSize, checkY + checkSize, isVisible ? 0xFF1E5E22 : 0xFF242424);
+				context.drawStrokedRectangle(checkX, checkY, checkSize, checkSize, isVisible ? 0xFF44FF44 : 0xFF555555);
+				if (isVisible) {
+					context.drawCenteredTextWithShadow(textRenderer, Text.literal("✔"), checkX + 7, checkY + 3, 0xFF44FF44);
+				} else {
+					context.drawCenteredTextWithShadow(textRenderer, Text.literal("—"), checkX + 7, checkY + 3, 0xFF777777);
 				}
-				context.drawTextWithShadow(textRenderer, Text.literal(badge), entryX + 2, entryY + 14, 0xAAAAAA);
+
+				// 2. Thumbnail box at [entryX + 22, entryY + 4], size 22x22
+				int thumbX = entryX + 22;
+				int thumbY = entryY + 4;
+				int thumbSize = 22;
+
+				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x88111111);
+				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
+
+				Identifier texture = this.cosmetic.getTexturePath(
+						(int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount())
+				);
+				context.drawTexture(
+						RenderPipelines.GUI_TEXTURED,
+						texture,
+						thumbX + 2,
+						thumbY + 2,
+						0.0F,
+						0.0F,
+						thumbSize - 4,
+						thumbSize - 4,
+						thumbSize - 4,
+						thumbSize - 4
+				);
+
+				// 3. Dedicated "Solo" Button at far right
+				int soloW = 32;
+				int soloH = 16;
+				int soloX = entryX + entryWidth - soloW - 4;
+				int soloY = entryY + 8;
+
+				context.fill(soloX, soloY, soloX + soloW, soloY + soloH, 0xAA223344);
+				context.drawStrokedRectangle(soloX, soloY, soloW, soloH, 0xAA5588AA);
+				context.drawCenteredTextWithShadow(textRenderer, Text.literal("Solo"), soloX + soloW / 2, soloY + 4, 0xFF99CCEE);
+
+				// 4. Cosmetic Name beside thumbnail (solid alpha 0xFF)
+				int textX = thumbX + thumbSize + 6;
+				context.drawTextWithShadow(
+						textRenderer,
+						Text.literal(this.cosmetic.getName()),
+						textX,
+						entryY + 4,
+						isVisible ? 0xFFFFFFFF : 0xFF888888
+				);
+
+				// 5. Category tag + Visibility indicator (solid alpha 0xFF)
+				String status = isVisible ? "§a● Shown" : "§c○ Hidden";
+				String categoryTag = "§7[" + this.cosmetic.getCategory().getDisplayName() + "] ";
+				context.drawTextWithShadow(
+						textRenderer,
+						Text.literal(categoryTag + status),
+						textX,
+						entryY + 16,
+						isVisible ? 0xFFAAAAAA : 0xFF666666
+				);
 			}
 
 			@Override
 			public boolean mouseClicked(Click click, boolean bl) {
-				CosmeticsScreen.this.setSelectedCosmetic(this.cosmetic);
-				if (bl) { // Double click equips/unequips
-					CosmeticsScreen.this.toggleEquipSelected();
+				int entryX = getX();
+				int entryY = getY();
+				int entryWidth = getWidth();
+				int soloW = 32;
+				int soloH = 16;
+				int soloX = entryX + entryWidth - soloW - 4;
+				int soloY = entryY + 8;
+
+				// If clicked Solo button or double-clicked the row -> Solo this cosmetic!
+				if (bl || (click.x() >= soloX && click.x() <= soloX + soloW
+						&& click.y() >= soloY && click.y() <= soloY + soloH)) {
+					ClientCosmeticManager.getInstance().solo(this.cosmetic.getId());
+					EquippedCosmeticListWidget.this.setSelected(this);
+					return true;
 				}
+
+				// Otherwise, clicking ANYWHERE on the row (checkbox, icon, text) toggles visibility directly!
+				ClientCosmeticManager.getInstance().toggleCosmeticVisible(this.cosmetic.getId());
+				EquippedCosmeticListWidget.this.setSelected(this);
 				return true;
 			}
 		}

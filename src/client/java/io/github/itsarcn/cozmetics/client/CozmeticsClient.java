@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRe
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.gui.screen.GameMenuScreen;
+import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.entity.EntityType;
@@ -25,9 +26,9 @@ public class CozmeticsClient implements ClientModInitializer {
 			}
 		});
 
-		// Add "✦ Cozmetics" button in the pause menu (GameMenuScreen)
+		// Add "✦ Cozmetics" button in the pause menu (GameMenuScreen) and title screen (TitleScreen)
 		ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-			if (screen instanceof GameMenuScreen) {
+			if (screen instanceof GameMenuScreen || screen instanceof TitleScreen) {
 				int buttonWidth = 100;
 				int buttonHeight = 20;
 				int buttonX = screen.width - buttonWidth - 10;

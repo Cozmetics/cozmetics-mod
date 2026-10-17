@@ -19,6 +19,13 @@ repositories {
 		}
 	}
 	maven {
+		name = 'Terraformers'
+		url = 'https://maven.terraformersmc.com/releases/'
+		content {
+			includeGroup("com.terraformersmc")
+		}
+	}
+	maven {
 		name = 'Modrinth'
 		url = 'https://api.modrinth.com/maven'
 	}
@@ -46,6 +53,9 @@ dependencies {
 
 	// GeckoLib for animated 3D cosmetic rendering
 	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.11:${project.geckolib_version}"
+
+	// Optional Mod Menu integration (compileOnly so there is no hard runtime dependency)
+	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"

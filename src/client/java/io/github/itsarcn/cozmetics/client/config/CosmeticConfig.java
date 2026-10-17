@@ -9,9 +9,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Persistent configuration data for client cosmetics preferences.
@@ -26,9 +24,15 @@ public class CosmeticConfig {
 	public Map<String, String> equipped = new HashMap<>();
 
 	/**
-	 * Map of category name to category visibility boolean (e.g. "PET" -> true).
+	 * Legacy map of category name to category visibility boolean.
 	 */
 	public Map<String, Boolean> visibility = new HashMap<>();
+
+	/**
+	 * Set of hidden cosmetic ID strings (e.g. "cozmetics:black_crown").
+	 * Hiding affects rendering only and does not unequip the cosmetic.
+	 */
+	public Set<String> hiddenCosmetics = new HashSet<>();
 
 	public static CosmeticConfig createDefault() {
 		CosmeticConfig config = new CosmeticConfig();
@@ -50,6 +54,7 @@ public class CosmeticConfig {
 				if (config != null) {
 					if (config.equipped == null) config.equipped = new HashMap<>();
 					if (config.visibility == null) config.visibility = new HashMap<>();
+					if (config.hiddenCosmetics == null) config.hiddenCosmetics = new HashSet<>();
 					return config;
 				}
 			} catch (Exception e) {

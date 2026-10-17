@@ -18,8 +18,8 @@ import software.bernie.geckolib.renderer.base.RenderPassInfo;
 
 /**
  * Reusable GeoObjectRenderer for rendering cosmetics attached to player entities.
- * Automatically handles anchor bone rotation matching player model parts,
- * custom attachment transforms, and backface-culled cutout rendering.
+ * Synchronizes model anchor bones with player limbs (head, body, arms, legs),
+ * crouch/sneak translations, and custom attachment transforms.
  */
 public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAnimatable, PlayerEntityRenderState, GeoRenderState> {
 	private final Cosmetic cosmetic;
@@ -37,6 +37,14 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 	}
 
 	@Override
+	public void addRenderData(DynamicCosmeticAnimatable animatable, @Nullable PlayerEntityRenderState relatedObject, GeoRenderState renderState, float partialTick) {
+		// Drive animation playback using continuous real-time so cosmetics animate in preview menus,
+		// when singleplayer is paused, and in-game without hitching.
+		double realTimeTick = (System.currentTimeMillis() % 100000000L) / 50.0;
+		renderState.addGeckolibData(software.bernie.geckolib.constant.DataTickets.TICK, realTimeTick);
+	}
+
+	@Override
 	public @Nullable RenderLayer getRenderType(GeoRenderState renderState, Identifier texture) {
 		// Use entityCutout (with backface culling) to prevent coplanar Z-fighting artifacts on 2D quads
 		return RenderLayers.entityCutout(texture);
@@ -48,8 +56,8 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		var poseStack = renderPassInfo.poseStack();
 
 		// Feature rendering space: base of player model.
-		// Translate to player origin + custom vertical offset
-		poseStack.translate(0.0F, 1.5F + (transform.translateY() / 16.0F), 0.0F);
+		// Translate to player origin (feet to neck = 1.5 blocks)
+		poseStack.translate(0.0F, 1.5F, 0.0F);
 
 		// Apply scale if specified
 		if (transform.scale() != 1.0F) {
@@ -69,26 +77,90 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 			PlayerEntityModel playerModel
 	) {
 		int effectiveLight = this.cosmetic.getTransform().staticLighting() ? 0x00F000F0 : light;
+		float customOffsetY = this.cosmetic.getTransform().translateY();
 
 		RenderPassInfo.BoneUpdater<GeoRenderState> boneUpdater = (passInfo, snapshots) -> {
-			// Synchronize anchor bones with player model rotations
-			snapshots.ifPresent("anchor_head", s -> s.setRotation(-playerModel.head.pitch, -playerModel.head.yaw, playerModel.head.roll));
+			// 1. Head (crowns, face masks)
+			snapshots.ifPresent("anchor_head", s -> {
+				s.setRotation(
+						-playerModel.head.pitch - s.getBone().baseRotX(),
+						-playerModel.head.yaw - s.getBone().baseRotY(),
+						playerModel.head.roll - s.getBone().baseRotZ()
+				);
+				s.setTranslation(
+						playerModel.head.originX,
+						playerModel.head.originY - customOffsetY,
+						playerModel.head.originZ
+				);
+			});
 
+			// 2. Torso (wings, scythe, aura)
 			snapshots.ifPresent("anchor_body", s -> {
-				// Pets stay upright and hover beside the player rather than tilting with torso
 				if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET) {
-					s.setRotation(-playerModel.body.pitch, -playerModel.body.yaw, playerModel.body.roll);
+					s.setRotation(
+							-playerModel.body.pitch - s.getBone().baseRotX(),
+							-playerModel.body.yaw - s.getBone().baseRotY(),
+							playerModel.body.roll - s.getBone().baseRotZ()
+					);
+					if (playerModel.body.originY != 0.0F || playerModel.body.originZ != 0.0F) {
+						s.setTranslation(playerModel.body.originX, playerModel.body.originY, playerModel.body.originZ);
+					}
 				}
 			});
 
-			snapshots.ifPresent("anchor_leftarm", s -> s.setRotation(-playerModel.leftArm.pitch, -playerModel.leftArm.yaw, playerModel.leftArm.roll));
-			snapshots.ifPresent("anchor_rightarm", s -> s.setRotation(-playerModel.rightArm.pitch, -playerModel.rightArm.yaw, playerModel.rightArm.roll));
+			// 3. Arms (fists, gauntlets) - synchronized with arm swings and sneaking
+			snapshots.ifPresent("anchor_leftarm", s -> {
+				s.setRotation(
+						-playerModel.leftArm.pitch - s.getBone().baseRotX(),
+						-playerModel.leftArm.yaw - s.getBone().baseRotY(),
+						playerModel.leftArm.roll - s.getBone().baseRotZ()
+				);
+				s.setTranslation(
+						playerModel.leftArm.originX - 5.0F,
+						playerModel.leftArm.originY - 2.0F,
+						playerModel.leftArm.originZ
+				);
+			});
+			snapshots.ifPresent("anchor_rightarm", s -> {
+				s.setRotation(
+						-playerModel.rightArm.pitch - s.getBone().baseRotX(),
+						-playerModel.rightArm.yaw - s.getBone().baseRotY(),
+						playerModel.rightArm.roll - s.getBone().baseRotZ()
+				);
+				s.setTranslation(
+						playerModel.rightArm.originX + 5.0F,
+						playerModel.rightArm.originY - 2.0F,
+						playerModel.rightArm.originZ
+				);
+			});
 
-			snapshots.ifPresent("anchor_leftleg", s -> s.setRotation(-playerModel.leftLeg.pitch, -playerModel.leftLeg.yaw, playerModel.leftLeg.roll));
-			snapshots.ifPresent("anchor_rightleg", s -> s.setRotation(-playerModel.rightLeg.pitch, -playerModel.rightLeg.yaw, playerModel.rightLeg.roll));
+			// 4. Legs (boots) - synchronized with walking swing and crouching
+			snapshots.ifPresent("anchor_leftleg", s -> {
+				s.setRotation(
+						-playerModel.leftLeg.pitch - s.getBone().baseRotX(),
+						-playerModel.leftLeg.yaw - s.getBone().baseRotY(),
+						playerModel.leftLeg.roll - s.getBone().baseRotZ()
+				);
+				s.setTranslation(
+						playerModel.leftLeg.originX - 1.9F,
+						playerModel.leftLeg.originY - 12.0F,
+						playerModel.leftLeg.originZ
+				);
+			});
+			snapshots.ifPresent("anchor_rightleg", s -> {
+				s.setRotation(
+						-playerModel.rightLeg.pitch - s.getBone().baseRotX(),
+						-playerModel.rightLeg.yaw - s.getBone().baseRotY(),
+						playerModel.rightLeg.roll - s.getBone().baseRotZ()
+				);
+				s.setTranslation(
+						playerModel.rightLeg.originX + 1.9F,
+						playerModel.rightLeg.originY - 12.0F,
+						playerModel.rightLeg.originZ
+				);
+			});
 		};
 
 		performRenderPass(this.animatable, playerState, matrices, queue, camera, effectiveLight, 0, boneUpdater);
 	}
 }
-

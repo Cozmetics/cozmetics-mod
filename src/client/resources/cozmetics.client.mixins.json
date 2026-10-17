@@ -3,7 +3,8 @@
 	"package": "io.github.itsarcn.cozmetics.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ExampleClientMixin"
+		"ExampleClientMixin",
+		"AnimationProcessorMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

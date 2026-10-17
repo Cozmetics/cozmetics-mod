@@ -41,6 +41,37 @@ public interface Cosmetic {
 	Identifier getTexturePath();
 
 	/**
+	 * Number of texture frames if this cosmetic has an animated texture (default 1).
+	 */
+	default int getTextureFrameCount() {
+		return 1;
+	}
+
+	/**
+	 * Frame duration in milliseconds for animated textures (default 100ms).
+	 */
+	default int getTextureFrameDurationMs() {
+		return 100;
+	}
+
+	/**
+	 * Identifier for the texture resource at the specified animation frame index.
+	 */
+	default Identifier getTexturePath(int frame) {
+		if (getTextureFrameCount() <= 1) {
+			return getTexturePath();
+		}
+		Identifier base = getTexturePath();
+		String path = base.getPath();
+		if (path.endsWith(".png")) {
+			path = path.substring(0, path.length() - 4) + "_frame_" + frame + ".png";
+		} else {
+			path = path + "_frame_" + frame + ".png";
+		}
+		return Identifier.of(base.getNamespace(), path);
+	}
+
+	/**
 	 * Subpath/identifier for the animation file (if animated, null otherwise).
 	 */
 	@Nullable
