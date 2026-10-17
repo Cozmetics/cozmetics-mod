@@ -4,6 +4,7 @@ build/
 
 # Fabric / Minecraft run directory
 run/
+/run/
 
 # IDE files
 .idea/
@@ -17,9 +18,10 @@ run/
 bin/
 out/
 
-# OS files
+# OS and Temp files
 .DS_Store
 Thumbs.db
+*.log
 
 # Raw asset source files
 assets-desgins/
