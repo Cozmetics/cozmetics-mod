@@ -355,10 +355,17 @@ public class CosmeticsScreen extends Screen {
 				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
 
 				Identifier baseTex = this.cosmetic.getTexturePath();
-				Identifier dynTex = io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager.getInstance().getTexturePath(baseTex, System.currentTimeMillis());
-				Identifier texture = (dynTex != null && !dynTex.equals(baseTex)) ? dynTex : this.cosmetic.getTexturePath(
-						(int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount())
-				);
+				var manager = io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager.getInstance();
+				var entry = manager.getOrLoadTexture(baseTex);
+				Identifier texture;
+				if (entry != null && entry.isAnimated()) {
+					texture = entry.getFrameAt(System.currentTimeMillis());
+				} else if (this.cosmetic.getTextureFrameCount() > 1) {
+					int frame = (int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount());
+					texture = this.cosmetic.getTexturePath(frame);
+				} else {
+					texture = baseTex;
+				}
 				context.drawTexture(
 						RenderPipelines.GUI_TEXTURED,
 						texture,

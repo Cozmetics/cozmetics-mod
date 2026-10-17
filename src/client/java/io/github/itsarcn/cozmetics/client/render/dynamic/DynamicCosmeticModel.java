@@ -23,15 +23,21 @@ public class DynamicCosmeticModel extends GeoModel<DynamicCosmeticAnimatable> {
 	@Override
 	public Identifier getTextureResource(GeoRenderState renderState) {
 		Identifier baseTex = this.cosmetic.getTexturePath();
-		Identifier dynTex = io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager.getInstance().getTexturePath(baseTex, System.currentTimeMillis());
-		if (dynTex != null && !dynTex.equals(baseTex)) {
-			return dynTex;
+
+		// 1. If CosmeticTextureManager has an animated texture (e.g. animated WebP or GIF with >1 frames), use it:
+		var manager = io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager.getInstance();
+		var entry = manager.getOrLoadTexture(baseTex);
+		if (entry != null && entry.isAnimated()) {
+			return entry.getFrameAt(System.currentTimeMillis());
 		}
 
+		// 2. If cosmetic definition specifies multi-file animated frames, cycle through them:
 		if (this.cosmetic.getTextureFrameCount() > 1) {
 			int frame = (int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount());
 			return this.cosmetic.getTexturePath(frame);
 		}
+
+		// 3. Otherwise return the base texture
 		return baseTex;
 	}
 

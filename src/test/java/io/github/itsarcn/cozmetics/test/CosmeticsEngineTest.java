@@ -1,9 +1,11 @@
 package io.github.itsarcn.cozmetics.test;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.itsarcn.cozmetics.Cozmetics;
+import io.github.itsarcn.cozmetics.api.CosmeticCatalogueProvider;
+import io.github.itsarcn.cozmetics.api.LocalDevelopmentCatalogueProvider;
+import io.github.itsarcn.cozmetics.api.LocalEquippedCosmeticsProvider;
 import io.github.itsarcn.cozmetics.client.config.CosmeticConfig;
 import io.github.itsarcn.cozmetics.cosmetic.*;
 import net.minecraft.util.Identifier;
@@ -12,10 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.FileReader;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -105,6 +109,82 @@ public class CosmeticsEngineTest {
 				.build();
 
 		assertThrows(IllegalArgumentException.class, () -> CosmeticRegistry.register(fakeCape));
+	}
+
+	@Test
+	void testDataDrivenJsonRoundTrip() {
+		for (Cosmetic cosmetic : CosmeticRegistry.getAll()) {
+			assertTrue(cosmetic instanceof CosmeticDefinition, "All fixtures should be CosmeticDefinition instances");
+			CosmeticDefinition def = (CosmeticDefinition) cosmetic;
+			JsonObject json = def.toJson();
+			assertNotNull(json);
+
+			CosmeticDefinition roundTripped = CosmeticDefinition.fromJson(json);
+			assertEquals(def.getId(), roundTripped.getId());
+			assertEquals(def.getCategory(), roundTripped.getCategory());
+			assertEquals(def.getName(), roundTripped.getName());
+			assertEquals(def.getModelPath(), roundTripped.getModelPath());
+			assertEquals(def.getTexturePath(), roundTripped.getTexturePath());
+			assertEquals(def.getTextureFrameCount(), roundTripped.getTextureFrameCount());
+			assertEquals(def.getTextureFrameDurationMs(), roundTripped.getTextureFrameDurationMs());
+			assertEquals(def.getAnimationPath(), roundTripped.getAnimationPath());
+			assertEquals(def.getIdleAnimationName(), roundTripped.getIdleAnimationName());
+			assertEquals(def.getAttachmentSlot(), roundTripped.getAttachmentSlot());
+			assertEquals(def.getTransform().translateY(), roundTripped.getTransform().translateY());
+			assertEquals(def.getTransform().scale(), roundTripped.getTransform().scale());
+			assertEquals(def.getTransform().staticLighting(), roundTripped.getTransform().staticLighting());
+		}
+	}
+
+	@Test
+	void testModelAndAnimationValidation() throws Exception {
+		Path resourceBase = Path.of("src/main/resources/assets");
+
+		for (Cosmetic cosmetic : CosmeticRegistry.getAll()) {
+			Identifier modelId = cosmetic.getModelPath();
+			Path modelFile = resourceBase.resolve(modelId.getNamespace())
+					.resolve("geckolib/models")
+					.resolve(modelId.getPath() + ".geo.json");
+
+			try (InputStream in = Files.newInputStream(modelFile)) {
+				ModelValidator.ValidationResult res = ModelValidator.validateGeometry(in, modelFile.toString());
+				assertTrue(res.valid(), "Model validation failed for " + cosmetic.getId() + ": " + res.message());
+				assertFalse(res.bones().isEmpty(), "No bones found in " + cosmetic.getId());
+			}
+
+			if (cosmetic.isAnimated()) {
+				Identifier animId = cosmetic.getAnimationPath();
+				Path animFile = resourceBase.resolve(animId.getNamespace())
+						.resolve("geckolib/animations")
+						.resolve(animId.getPath() + ".animation.json");
+
+				try (InputStream in = Files.newInputStream(animFile)) {
+					boolean animValid = ModelValidator.validateAnimation(in, cosmetic.getIdleAnimationName(), animFile.toString());
+					assertTrue(animValid, "Animation validation failed for " + cosmetic.getId());
+				}
+			}
+		}
+	}
+
+	@Test
+	void testCatalogueAndEquippedProviders() {
+		CosmeticCatalogueProvider catalogue = LocalDevelopmentCatalogueProvider.getInstance();
+		assertEquals(8, catalogue.getAllCosmetics().size());
+		assertTrue(catalogue.hasCosmetic(Cozmetics.id("angel_pet")));
+		assertFalse(catalogue.hasCosmetic(Cozmetics.id("non_existent")));
+		assertFalse(catalogue.getCosmeticsByCategory(CosmeticCategory.PET).isEmpty());
+
+		LocalEquippedCosmeticsProvider equippedProvider = LocalEquippedCosmeticsProvider.getInstance();
+		UUID testUuid = UUID.randomUUID();
+		Map<CosmeticCategory, Cosmetic> equipped = equippedProvider.getEquippedCosmetics(testUuid);
+		assertFalse(equipped.isEmpty());
+		assertEquals(8, equipped.size());
+
+		assertTrue(equippedProvider.isCosmeticVisible(testUuid, Cozmetics.id("angel_pet")));
+		equippedProvider.setCosmeticVisible(testUuid, Cozmetics.id("angel_pet"), false);
+		assertFalse(equippedProvider.isCosmeticVisible(testUuid, Cozmetics.id("angel_pet")));
+		equippedProvider.setCosmeticVisible(testUuid, Cozmetics.id("angel_pet"), true);
+		assertTrue(equippedProvider.isCosmeticVisible(testUuid, Cozmetics.id("angel_pet")));
 	}
 
 	@Test
@@ -235,4 +315,3 @@ public class CosmeticsEngineTest {
 		}
 	}
 }
-
