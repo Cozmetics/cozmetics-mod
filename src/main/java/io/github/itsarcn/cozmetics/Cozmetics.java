@@ -2,6 +2,7 @@ package io.github.itsarcn.cozmetics;
 
 import net.fabricmc.api.ModInitializer;
 
+import io.github.itsarcn.cozmetics.cosmetic.CosmeticRegistry;
 import net.minecraft.util.Identifier;
 
 import org.slf4j.Logger;
@@ -21,7 +22,9 @@ public class Cozmetics implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("Hello Fabric world!");
+		LOGGER.info("Initializing Cozmetics common...");
+		CosmeticRegistry.init();
+		LOGGER.info("Registered {} cosmetics.", CosmeticRegistry.getAll().size());
 	}
 
 	public static Identifier id(String path) {

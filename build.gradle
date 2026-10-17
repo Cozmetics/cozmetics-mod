@@ -9,6 +9,18 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	maven {
+		name = 'GeckoLib'
+		url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+		content {
+			includeGroupByRegex("software\\.bernie.*")
+			includeGroup("com.eliotlash.mclib")
+		}
+	}
+	maven {
+		name = 'Modrinth'
+		url = 'https://api.modrinth.com/maven'
+	}
 }
 
 loom {
@@ -30,6 +42,9 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// GeckoLib for animated 3D cosmetic rendering
+	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.11:${project.geckolib_version}"
 }
 
 processResources {
@@ -50,6 +65,10 @@ java {
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
+
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
