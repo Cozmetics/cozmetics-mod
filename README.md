@@ -2,33 +2,58 @@
 
 [![Build This Minecraft Mod](https://github.com/ItsARCn/cozmetics-mod/actions/workflows/build-mod.yml/badge.svg)](https://github.com/ItsARCn/cozmetics-mod/actions/workflows/build-mod.yml)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11-brightgreen.svg)](https://www.minecraft.net/)
-[![Fabric Loader](https://img.shields.io/badge/Fabric-0.18.4-blue.svg)](https://fabricmc.net/)
+[![Fabric Loader](https://img.shields.io/badge/Fabric-0.19.5+-blue.svg)](https://fabricmc.net/)
 [![GeckoLib](https://img.shields.io/badge/GeckoLib-5.4.5-orange.svg)](https://geckolib.com/)
 
-**Cozmetics** is a high-performance cosmetic rendering mod for Minecraft Java Edition built on the Fabric toolchain. It brings animated 3D accessories, companions, and effects to player models using GeckoLib 5.
+**Cozmetics** is a high-performance, client-side cosmetic rendering mod for Minecraft Java Edition built on Fabric and GeckoLib 5. It provides a modular, data-driven engine capable of loading animated 3D models, direct Blockbench (`.bbmodel`) project files, and advanced texture formats (static/animated WebP, APNG, PNG) with full player bone synchronization.
 
 ---
 
-## Features
+## Key Features
 
-- **Reusable 3D Cosmetic Engine**: High-performance GeckoLib 5 rendering pipeline supporting static and animated models across 8 distinct categories:
-  - **Pets**: Animated companions hovering alongside the player (`Angel Pet`).
-  - **Wings**: Animated player-attached wings with multi-state animations (`Halloween Bat Wings V2`).
-  - **Auras**: Rotating, pulsing atmospheric particle rings (`Corrupted Aura`).
-  - **Back Accessories**: Animated scythes and back-mounted gear (`Medal Scythe`).
-  - **Boots**: Animated & static leg/foot accessories (`Gamer RGB Boots`).
-  - **Face Masks**: Synchronized headwear matching pitch and yaw (`Demon Crow Mask`).
-  - **Fists**: Arm-bound gauntlets and weapons moving with player arm swings (`Corrupted Fists`).
-  - **Headwear**: Skull-fitted crowns and hats with custom offsets & full-bright lighting (`Black Crown`).
-  - *(Capes reserved)*: Strictly disabled for future PiCapes integration.
-- **In-Game Wardrobe Menu**:
-  - Full-featured GUI accessible from the Pause menu (`✦ Cozmetics` button) or `CosmeticsScreen.open()`.
-  - Category navigation tabs across all enabled cosmetic types.
-  - Interactive live 3D player preview tracking cursor look angles and equipped cosmetics.
-  - Equip, unequip, and independent category visibility toggling.
-- **Persistent Preferences**: Local configuration saved to `config/cozmetics.json` persisting equipped selections and visibility states across restarts.
+### 1. Reusable 3D Cosmetic Engine
+- **Data-Driven Architecture**: Clean, extensible cosmetic registry with zero hardcoded demo clutter. Ready for dynamic catalogue synchronization from the future Cozmetics website/backend.
+- **8 Cosmetic Categories Supported**:
+  - **Pets**: Animated companions hovering alongside the player (`AttachmentSlot.PET`).
+  - **Wings**: Player-attached back wings moving with flight and sneaking.
+  - **Auras**: Rotating, pulsing atmospheric particle rings.
+  - **Back Accessories**: Scythes, quivers, backpacks, and back-mounted gear.
+  - **Boots**: Animated & static footwear synchronized with leg walking swings.
+  - **Face Masks**: Synchronized headwear matching player pitch, yaw, and head tilt.
+  - **Fists**: Arm-bound gauntlets and weapons moving with player arm swings.
+  - **Headwear**: Skull-fitted crowns, halos, and hats with configurable offsets and static full-bright lighting.
+  - *(Capes reserved)*: Strictly disabled (`CAPE.isEnabled() == false`) for future PiCapes integration.
 - **Z-Fighting & Culling Protection**: Optimized cutout render passes preventing coplanar depth-fighting artifacts on 2D planes and thin model geometries.
-- **Client-Side Safe Rendering**: Zero server footprint. Cosmetic render logic and GeckoLib pipelines are strictly isolated to the client environment, preventing dedicated server crashes.
+
+### 2. Direct Blockbench (`.bbmodel`) Support
+- **Native In-Memory Loading**: Directly load original `.bbmodel` project files without manually exporting `.geo.json` or `.animation.json` beforehand:
+  - **Geometry**: Automatically converts cuboids (`from`, `to`, `origin`, `rotation`, `inflate`) and hierarchies into Bedrock 1.12.0 format.
+  - **UV Mapping**: Supports both standard Box UV (`uv_offset`) and explicit per-face UV coordinates.
+  - **Hierarchy & Bones**: Automatically builds parent-child bone trees and preserves anchor bones (`anchor_head`, `anchor_body`, `anchor_leftarm`, `anchor_rightarm`, `anchor_leftleg`, `anchor_rightleg`).
+  - **Embedded Textures**: Automatically decodes embedded `data:image/png;base64` textures directly from `.bbmodel` files into GPU textures.
+  - **Animations**: Translates timeline channels (`rotation`, `position`, `scale`) and keyframe interpolation (`linear`, `catmullrom`, `step`, `bezier`) into Bedrock 1.8.0 animation files.
+- **Standalone Converter Utility**: Includes `BbModelConverter` for build-time or programmatic export of `.bbmodel` files into standalone `.geo.json`, `.animation.json`, and `.png` assets.
+
+### 3. Universal Image & Texture Pipeline
+- **Multi-Format Image Support**: Bundles TwelveMonkeys ImageIO plugins (jar-in-jar with zero native binary dependencies).
+- **Supported Formats**:
+  - **WebP & Animated WebP**: Multi-frame ANMF alpha blending (`AlphaComposite.Src` vs `SrcOver`), frame disposal flags, and variable frame durations.
+  - **APNG & PNG**: Static and animated PNG frame sequences.
+  - **GIF, JPEG, BMP, TIFF**: Fallback and legacy image decoding.
+- **Zero-Allocation Time Sampling**: Time-based frame lookups driven by continuous real-time to avoid animation hitches when paused or inside menus.
+
+### 4. Interactive 360° Wardrobe Screen
+- **Full 360° Orbital Preview**: Interactive 3D character viewport with mouse drag orbital rotation (pitch + yaw) and mouse wheel zoom.
+- **Visibility Control**: Dedicated wardrobe controls (Show, Hide, Solo) that affect client-side rendering visibility without altering equipped state.
+- **Clean Default Empty State**: When launched without account/backend data, the mod starts with an empty catalogue and gracefully renders an informative status message.
+- **Entrypoints**: Accessible from:
+  1. Minecraft Pause Menu (`✦ Cozmetics` button).
+  2. Minecraft Title Screen (before joining a world).
+  3. Fabric Mod Menu (optional compatibility integration).
+
+### 5. Backend & Offline Architecture
+- **Clean Service Boundaries**: Decouples cosmetic discovery (`CosmeticCatalogueProvider`) and player equipment (`EquippedCosmeticsProvider`) from network and UI code.
+- **100% Offline-Safe**: Requires no internet connection, external database, or remote servers to launch and operate.
 
 ---
 
@@ -37,10 +62,11 @@
 | Component | Target Version |
 | :--- | :--- |
 | **Minecraft** | `1.21.11` |
-| **Fabric Loader** | `0.18.4` |
-| **Fabric API** | `0.141.3+1.21.11` |
+| **Fabric Loader** | `>=0.19.5` |
+| **Fabric API** | `0.141.6+1.21.11` |
 | **GeckoLib** | `5.4.5` (Fabric 1.21.11) |
-| **Java Toolchain** | `Java 21` (Compilation) / `Java 25` (Loom build runner) |
+| **Image Pipeline** | TwelveMonkeys ImageIO `3.12.0` (WebP, BMP, TIFF) |
+| **Java Toolchain** | `Java 21` (Compilation & Runtime) / `Java 25` (Loom daemon) |
 | **Mappings** | Yarn `1.21.11+build.6` |
 
 ---
@@ -48,23 +74,31 @@
 ## Building Locally
 
 ### Prerequisites
-- JDK 25 installed (required by Fabric Loom 1.18 runtime).
-- A local terminal with Git.
+- JDK 21+ installed (JDK 25 recommended for Loom daemon).
+- Terminal with Git.
+
+### Run Unit Tests
+The test suite is 100% in-memory and verifies `.bbmodel` parsing, JSON round-trips, configuration serialization, and provider contracts:
+
+```bash
+./gradlew test
+```
 
 ### Build the Mod JAR
-Run Gradle wrapper from the project root:
+Compile and remap the production mod JAR:
 
 ```bash
 ./gradlew build
 ```
 
-Compiled installable mod JARs will be generated in:
+The resulting JAR will be generated in:
 ```text
-build/libs/cozmetics-<version>.jar
+build/libs/cozmetics-1.0.0.jar
 ```
+*(The final shipped JAR has a lightweight footprint of ~1.3 MB with zero demo assets).*
 
 ### Launch Minecraft Client
-To test in a local development client environment:
+Launch a test development client:
 
 ```bash
 ./gradlew runClient
@@ -72,14 +106,19 @@ To test in a local development client environment:
 
 ---
 
-## GitHub Actions Automated Builds
+## Blockbench `.bbmodel` Integration Guide
 
-A portable GitHub Actions build workflow is available under [`.github/workflows/build-mod.yml`](.github/workflows/build-mod.yml):
+To author cosmetics in Blockbench for Cozmetics:
 
-1. Navigate to the **Actions** tab in the repository.
-2. Select **Build This Minecraft Mod**.
-3. Click **Run workflow** (default is set to Java 25 runner with Java 21 compilation toolchain).
-4. Download the compiled release JAR directly from the generated release or workflow artifacts.
+1. **Model Format**: Create a project using **Bedrock Model**, **Generic Model**, or **GeckoLib Animated Model**.
+2. **Anchor Bones**: Group cubes intended to bind to the player under standard anchor bones:
+   - `anchor_head` — Binds to player head (hats, crowns, masks).
+   - `anchor_body` — Binds to player torso (wings, auras, back gear, pets).
+   - `anchor_leftarm` / `anchor_rightarm` — Binds to player arms (gauntlets, fists).
+   - `anchor_leftleg` / `anchor_rightleg` — Binds to player legs (boots).
+3. **Textures**: Save textures directly in Blockbench so they are embedded as base64 in the `.bbmodel`, or specify external texture paths.
+4. **Animations**: Add animations (e.g. `animation.idle`) with rotation, position, or scale keyframes.
+5. **Runtime Loading**: Register the model via `BbModelManager.getInstance().load(id, stream)` or convert via `BbModelConverter.convert(inputPath, outputDir)`.
 
 ---
 

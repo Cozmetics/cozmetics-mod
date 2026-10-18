@@ -61,10 +61,11 @@ public final class CosmeticRegistry {
 	}
 
 	/**
-	 * Initializes the registry using the local development catalogue fixtures.
+	 * Initializes the registry. Starts empty by default.
 	 */
 	public static void init() {
-		LocalDevelopmentCatalogueProvider.getInstance().load();
+		// Starts clean and empty in production.
+		// Dynamic catalogue providers (e.g. backend/API) register items as needed.
 	}
 
 	private CosmeticRegistry() {}

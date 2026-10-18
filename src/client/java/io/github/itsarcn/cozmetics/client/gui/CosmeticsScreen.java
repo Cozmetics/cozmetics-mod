@@ -159,6 +159,16 @@ public class CosmeticsScreen extends Screen {
 
 		// 3. Render Child Widgets (Equipped Cosmetics List and Buttons)
 		super.render(context, mouseX, mouseY, delta);
+
+		// 4. Render graceful empty state indicator when no cosmetics are equipped
+		if (ClientCosmeticManager.getInstance().getAllEquipped().isEmpty()) {
+			int rightPanelX = this.previewRight + 10;
+			int rightPanelWidth = this.width - rightPanelX - 14;
+			int centerY = (this.previewTop + this.previewBottom) / 2 - 12;
+			context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7No cosmetics equipped"), rightPanelX + rightPanelWidth / 2, centerY, 0xFFAAAAAA);
+			context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8Items will appear here"), rightPanelX + rightPanelWidth / 2, centerY + 14, 0xFF666666);
+			context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8when equipped from your account"), rightPanelX + rightPanelWidth / 2, centerY + 26, 0xFF555555);
+		}
 	}
 
 	private void renderPlayerPreview(DrawContext context, float delta) {

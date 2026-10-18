@@ -2,7 +2,6 @@ package io.github.itsarcn.cozmetics.api;
 
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
-import io.github.itsarcn.cozmetics.cosmetic.CosmeticRegistry;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
@@ -10,6 +9,7 @@ import java.util.*;
 /**
  * Local offline development implementation of {@link EquippedCosmeticsProvider}.
  * Keeps player cosmetic equipment decoupled from network, account, or database layers.
+ * Starts completely empty by default.
  */
 public class LocalEquippedCosmeticsProvider implements EquippedCosmeticsProvider {
 	private static final LocalEquippedCosmeticsProvider INSTANCE = new LocalEquippedCosmeticsProvider();
@@ -22,23 +22,25 @@ public class LocalEquippedCosmeticsProvider implements EquippedCosmeticsProvider
 
 	@Override
 	public Map<CosmeticCategory, Cosmetic> getEquippedCosmetics(UUID playerUuid) {
-		return Collections.unmodifiableMap(playerEquipped.computeIfAbsent(playerUuid, u -> {
-			Map<CosmeticCategory, Cosmetic> map = new EnumMap<>(CosmeticCategory.class);
-			for (CosmeticCategory cat : CosmeticCategory.values()) {
-				if (cat.isEnabled()) {
-					List<Cosmetic> list = CosmeticRegistry.getByCategory(cat);
-					if (!list.isEmpty()) {
-						map.put(cat, list.getFirst());
-					}
-				}
-			}
-			return map;
-		}));
+		return Collections.unmodifiableMap(playerEquipped.computeIfAbsent(playerUuid, u -> new EnumMap<>(CosmeticCategory.class)));
 	}
 
 	@Override
 	public Optional<Cosmetic> getEquipped(UUID playerUuid, CosmeticCategory category) {
 		return Optional.ofNullable(getEquippedCosmetics(playerUuid).get(category));
+	}
+
+	public void equip(UUID playerUuid, Cosmetic cosmetic) {
+		if (cosmetic != null && cosmetic.getCategory().isEnabled()) {
+			playerEquipped.computeIfAbsent(playerUuid, u -> new EnumMap<>(CosmeticCategory.class)).put(cosmetic.getCategory(), cosmetic);
+		}
+	}
+
+	public void unequip(UUID playerUuid, CosmeticCategory category) {
+		Map<CosmeticCategory, Cosmetic> map = playerEquipped.get(playerUuid);
+		if (map != null) {
+			map.remove(category);
+		}
 	}
 
 	@Override
@@ -56,4 +58,3 @@ public class LocalEquippedCosmeticsProvider implements EquippedCosmeticsProvider
 		}
 	}
 }
-

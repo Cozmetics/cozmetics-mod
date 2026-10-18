@@ -18,81 +18,68 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * Default offline implementation of CosmeticCatalogueProvider using local development fixtures.
- * Requires zero internet connection and loads registered cosmetics from development_fixtures.json.
+ * Catalogue provider implementation backed by {@link CosmeticRegistry}.
+ *
+ * In production, the catalogue starts empty and is populated dynamically by external
+ * sources (e.g. future Cozmetics website/API synchronization).
+ * Optional development fixtures can be explicitly loaded via {@link #loadFixtures(InputStream)}.
  */
 public class LocalDevelopmentCatalogueProvider implements CosmeticCatalogueProvider {
 	private static final LocalDevelopmentCatalogueProvider INSTANCE = new LocalDevelopmentCatalogueProvider();
-	private static final String FIXTURES_PATH = "/assets/cozmetics/catalogue/development_fixtures.json";
-	private boolean loaded = false;
 
 	public static LocalDevelopmentCatalogueProvider getInstance() {
 		return INSTANCE;
 	}
 
 	/**
-	 * Loads development fixtures into the CosmeticRegistry.
-	 * Can be safely called multiple times; will only load once unless reloaded.
+	 * Explicitly loads cosmetic fixtures from an input stream into the CosmeticRegistry.
+	 * This is an opt-in method for testing and development environments only.
+	 * Normal production and client launch NEVER automatically invokes this.
+	 *
+	 * @param in InputStream containing JSON fixtures
+	 * @return Number of successfully loaded cosmetics
 	 */
-	public synchronized void load() {
-		if (this.loaded) {
-			return;
+	public synchronized int loadFixtures(InputStream in) {
+		if (in == null) {
+			return 0;
 		}
 
-		try (InputStream in = getClass().getResourceAsStream(FIXTURES_PATH)) {
-			if (in == null) {
-				Cozmetics.LOGGER.warn("Local development fixtures not found at {}", FIXTURES_PATH);
-				return;
-			}
-			try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-				JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
-				if (root.has("cosmetics") && root.get("cosmetics").isJsonArray()) {
-					JsonArray array = root.getAsJsonArray("cosmetics");
-					for (JsonElement elem : array) {
-						if (elem.isJsonObject()) {
-							try {
-								CosmeticDefinition def = CosmeticDefinition.fromJson(elem.getAsJsonObject());
-								CosmeticRegistry.register(def);
-							} catch (Exception e) {
-								Cozmetics.LOGGER.error("Failed to parse cosmetic fixture: {}", elem, e);
-							}
+		int count = 0;
+		try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+			JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+			if (root.has("cosmetics") && root.get("cosmetics").isJsonArray()) {
+				JsonArray array = root.getAsJsonArray("cosmetics");
+				for (JsonElement elem : array) {
+					if (elem.isJsonObject()) {
+						try {
+							CosmeticDefinition def = CosmeticDefinition.fromJson(elem.getAsJsonObject());
+							CosmeticRegistry.register(def);
+							count++;
+						} catch (Exception e) {
+							Cozmetics.LOGGER.error("Failed to parse cosmetic fixture: {}", elem, e);
 						}
 					}
-					this.loaded = true;
-					Cozmetics.LOGGER.info("Loaded {} cosmetic fixtures from {}", CosmeticRegistry.getAll().size(), FIXTURES_PATH);
 				}
+				Cozmetics.LOGGER.info("Explicitly loaded {} cosmetic fixtures.", count);
 			}
 		} catch (Exception e) {
-			Cozmetics.LOGGER.error("Failed to load local development catalogue fixtures from {}", FIXTURES_PATH, e);
+			Cozmetics.LOGGER.error("Failed to load cosmetic fixtures from stream", e);
 		}
-	}
-
-	public synchronized void reload() {
-		this.loaded = false;
-		load();
+		return count;
 	}
 
 	@Override
 	public Collection<Cosmetic> getAllCosmetics() {
-		if (!this.loaded) {
-			load();
-		}
 		return CosmeticRegistry.getAll();
 	}
 
 	@Override
 	public Collection<Cosmetic> getCosmeticsByCategory(CosmeticCategory category) {
-		if (!this.loaded) {
-			load();
-		}
 		return CosmeticRegistry.getByCategory(category);
 	}
 
 	@Override
 	public Optional<Cosmetic> getCosmetic(Identifier id) {
-		if (!this.loaded) {
-			load();
-		}
 		return CosmeticRegistry.get(id);
 	}
 }

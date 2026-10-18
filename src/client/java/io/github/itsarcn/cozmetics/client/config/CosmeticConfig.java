@@ -36,9 +36,7 @@ public class CosmeticConfig {
 
 	public static CosmeticConfig createDefault() {
 		CosmeticConfig config = new CosmeticConfig();
-		// Default: Angel Pet equipped
-		config.equipped.put(CosmeticCategory.PET.name(), "cozmetics:angel_pet");
-		// All categories visible by default
+		// All enabled categories are set to visible by default, but equipped starts completely empty
 		for (CosmeticCategory category : CosmeticCategory.values()) {
 			if (category.isEnabled()) {
 				config.visibility.put(category.name(), true);

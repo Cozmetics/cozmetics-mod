@@ -87,21 +87,6 @@ public class ClientCosmeticManager {
 				Cozmetics.LOGGER.warn("Invalid config entry: {} -> {}", entry.getKey(), entry.getValue(), e);
 			}
 		}
-
-		// For local development testing: ensure enabled categories have sample cosmetics equipped
-		boolean populatedMissing = false;
-		for (CosmeticCategory cat : CosmeticCategory.values()) {
-			if (cat.isEnabled() && !this.equippedCosmetics.containsKey(cat)) {
-				List<Cosmetic> list = CosmeticRegistry.getByCategory(cat);
-				if (!list.isEmpty()) {
-					this.equippedCosmetics.put(cat, list.getFirst());
-					populatedMissing = true;
-				}
-			}
-		}
-		if (populatedMissing) {
-			save();
-		}
 	}
 
 	/**
