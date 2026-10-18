@@ -22,7 +22,7 @@
   - **Face Masks**: Synchronized headwear matching player pitch, yaw, and head tilt.
   - **Fists**: Arm-bound gauntlets and weapons moving with player arm swings.
   - **Headwear**: Skull-fitted crowns, halos, and hats with configurable offsets and static full-bright lighting.
-  - *(Capes reserved)*: Strictly disabled (`CAPE.isEnabled() == false`) for future PiCapes integration.
+  - *(Capes reserved)*: Strictly disabled (`CAPE.isEnabled() == false`) for now.
 - **Z-Fighting & Culling Protection**: Optimized cutout render passes preventing coplanar depth-fighting artifacts on 2D planes and thin model geometries.
 
 ### 2. Direct Blockbench (`.bbmodel`) Support
@@ -124,4 +124,6 @@ To author cosmetics in Blockbench for Cozmetics:
 
 ## License
 
-This project is licensed under the [CC0 1.0 Universal License](LICENSE).
+This project is licensed under a **Source-Available / All Rights Reserved** license. See [LICENSE](LICENSE) for details.
+
+The source code is publicly accessible for study, education, and audit. Unauthorized copying, modification, re-hosting, redistribution, or commercial use is strictly prohibited.
