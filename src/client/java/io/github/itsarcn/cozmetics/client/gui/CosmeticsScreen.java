@@ -83,7 +83,8 @@ public class CosmeticsScreen extends Screen {
 		int listTop = 56;
 		int doneButtonHeight = 20;
 		int doneButtonY = this.height - 14 - doneButtonHeight;
-		int listHeight = Math.max(60, doneButtonY - listTop - 6);
+		int catalogButtonY = doneButtonY - 24;
+		int listHeight = Math.max(60, catalogButtonY - listTop - 4);
 
 		this.listWidget = new EquippedCosmeticListWidget(
 				this.client,
@@ -96,11 +97,22 @@ public class CosmeticsScreen extends Screen {
 		addDrawableChild(this.listWidget);
 		this.listWidget.refresh();
 
-		// 3. Clean Done button at bottom of panel
+		// 3. Action Buttons at bottom of panel: [ Browse Catalog ] and [ Done ]
+		ButtonWidget catalogBtn = ButtonWidget.builder(Text.literal("§e★ Browse Catalog"), btn -> openCatalog())
+				.dimensions(rightPanelX, catalogButtonY, rightPanelWidth, 20)
+				.build();
+		addDrawableChild(catalogBtn);
+
 		ButtonWidget doneButton = ButtonWidget.builder(Text.literal("Done"), btn -> close())
 				.dimensions(rightPanelX, doneButtonY, rightPanelWidth, doneButtonHeight)
 				.build();
 		addDrawableChild(doneButton);
+	}
+
+	private void openCatalog() {
+		if (this.client != null) {
+			this.client.setScreen(new CosmeticCatalogScreen(this));
+		}
 	}
 
 	private void showAll() {

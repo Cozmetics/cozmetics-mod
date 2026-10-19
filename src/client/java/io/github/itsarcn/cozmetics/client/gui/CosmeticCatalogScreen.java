@@ -1,0 +1,539 @@
+package io.github.itsarcn.cozmetics.client.gui;
+
+import io.github.itsarcn.cozmetics.catalog.CatalogItem;
+import io.github.itsarcn.cozmetics.client.catalog.CosmeticCatalogManager;
+import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
+import io.github.itsarcn.cozmetics.client.download.CosmeticAssetDownloader;
+import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
+import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
+import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
+import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
+import io.github.itsarcn.cozmetics.cosmetic.CosmeticRegistry;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
+import org.jspecify.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import java.util.*;
+
+/**
+ * Dedicated Cozmetics Catalogue Screen.
+ *
+ * Implements a native Minecraft visual style (per PiCapes reference), featuring:
+ * - Category navigation tabs & real-time search
+ * - Compact cosmetic cards with static lightweight PNG/WebP thumbnails
+ * - Isolated 3D cosmetic-only preview sidebar with 360° mouse orbit and zoom
+ * - On-demand ZIP package downloads with verification and local caching
+ */
+public class CosmeticCatalogScreen extends Screen {
+
+	private final Screen parent;
+	private final CosmeticCatalogManager catalogManager;
+	private final CosmeticAssetDownloader assetDownloader;
+	private final ClientCosmeticManager clientCosmeticManager;
+
+	private TextFieldWidget searchBox;
+	private CatalogListWidget listWidget;
+	@Nullable private CosmeticCategory activeCategoryFilter = null; // null = ALL
+	@Nullable private CatalogItem selectedItem = null;
+
+	// 3D Orbital rotation & zoom for the isolated preview
+	private float previewRotationYaw = 0.0f;
+	private float previewRotationPitch = 0.0f;
+	private float previewZoom = 1.0f;
+	private boolean draggingPreview = false;
+	private double lastMouseX = 0;
+	private double lastMouseY = 0;
+
+	private int previewLeft;
+	private int previewTop;
+	private int previewRight;
+	private int previewBottom;
+
+	private final List<ButtonWidget> categoryButtons = new ArrayList<>();
+	private ButtonWidget sidebarEquipButton;
+
+	public CosmeticCatalogScreen(@Nullable Screen parent) {
+		super(Text.literal("Cozmetics Catalogue"));
+		this.parent = parent;
+		this.catalogManager = CosmeticCatalogManager.getInstance();
+		this.assetDownloader = CosmeticAssetDownloader.getInstance();
+		this.clientCosmeticManager = ClientCosmeticManager.getInstance();
+	}
+
+	@Override
+	protected void init() {
+		this.categoryButtons.clear();
+
+		int rightPanelWidth = Math.min(230, Math.max(200, (int) (this.width * 0.35f)));
+		int leftPanelWidth = this.width - rightPanelWidth - 28;
+
+		// 1. Search Box at top left
+		int searchY = 22;
+		this.searchBox = new TextFieldWidget(
+				this.textRenderer,
+				14,
+				searchY,
+				Math.min(180, leftPanelWidth / 2),
+				18,
+				Text.literal("Search")
+		);
+		this.searchBox.setPlaceholder(Text.literal("Search cosmetics..."));
+		this.searchBox.setChangedListener(query -> refreshList());
+		addDrawableChild(this.searchBox);
+
+		// 2. Category Filter Tabs beside or below search
+		int tabX = 14 + this.searchBox.getWidth() + 6;
+		int tabY = searchY;
+		int tabH = 18;
+
+		// "All" tab
+		ButtonWidget allBtn = ButtonWidget.builder(
+				getCategoryTabText(null, "All"),
+				btn -> selectCategory(null)
+		).dimensions(tabX, tabY, 34, tabH).build();
+		addDrawableChild(allBtn);
+		categoryButtons.add(allBtn);
+		tabX += 36;
+
+		// Enabled Category tabs
+		for (CosmeticCategory cat : CosmeticCategory.values()) {
+			if (!cat.isEnabled()) continue;
+			String label = cat.getDisplayName();
+			int btnW = Math.max(38, this.textRenderer.getWidth(label) + 8);
+			if (tabX + btnW > leftPanelWidth + 14) {
+				// Don't overflow panel
+				break;
+			}
+			ButtonWidget catBtn = ButtonWidget.builder(
+					getCategoryTabText(cat, label),
+					btn -> selectCategory(cat)
+			).dimensions(tabX, tabY, btnW, tabH).build();
+			addDrawableChild(catBtn);
+			categoryButtons.add(catBtn);
+			tabX += btnW + 2;
+		}
+
+		// 3. Cosmetic Cards Scrollable List
+		int listTop = 46;
+		int listBottom = this.height - 36;
+		int listHeight = Math.max(60, listBottom - listTop);
+
+		this.listWidget = new CatalogListWidget(
+				this.client,
+				leftPanelWidth,
+				listHeight,
+				listTop,
+				34
+		);
+		this.listWidget.setDimensionsAndPosition(leftPanelWidth, listHeight, 14, listTop);
+		addDrawableChild(this.listWidget);
+
+		// 4. Isolated Preview Sidebar (Right side)
+		this.previewLeft = this.width - rightPanelWidth - 14;
+		this.previewTop = 22;
+		this.previewRight = this.width - 14;
+		int sidebarPreviewHeight = Math.min(160, (this.height - 110));
+		this.previewBottom = this.previewTop + sidebarPreviewHeight;
+
+		// Sidebar Equip / Unequip button
+		int btnY = this.previewBottom + 52;
+		this.sidebarEquipButton = ButtonWidget.builder(
+				Text.literal("Equip Cosmetic"),
+				btn -> toggleEquipSelected()
+		).dimensions(this.previewLeft + 4, btnY, rightPanelWidth - 8, 20).build();
+		this.sidebarEquipButton.active = false;
+		addDrawableChild(this.sidebarEquipButton);
+
+		// 5. Done / Back Button at bottom center
+		ButtonWidget doneButton = ButtonWidget.builder(Text.literal("Done"), btn -> close())
+				.dimensions(this.width / 2 - 50, this.height - 26, 100, 20)
+				.build();
+		addDrawableChild(doneButton);
+
+		refreshList();
+	}
+
+	private Text getCategoryTabText(@Nullable CosmeticCategory cat, String label) {
+		boolean active = (this.activeCategoryFilter == cat);
+		return Text.literal(active ? "§e[" + label + "]" : label);
+	}
+
+	private void selectCategory(@Nullable CosmeticCategory cat) {
+		this.activeCategoryFilter = cat;
+		this.clearAndInit();
+	}
+
+	private void refreshList() {
+		if (this.listWidget == null) return;
+		String query = (this.searchBox != null) ? this.searchBox.getText() : "";
+		List<CatalogItem> filtered = this.catalogManager.getFilteredItems(this.activeCategoryFilter, query);
+		this.listWidget.setItems(filtered);
+
+		if (this.selectedItem == null && !filtered.isEmpty()) {
+			selectItem(filtered.getFirst());
+		} else if (this.selectedItem != null && !filtered.contains(this.selectedItem)) {
+			selectItem(filtered.isEmpty() ? null : filtered.getFirst());
+		}
+	}
+
+	public void selectItem(@Nullable CatalogItem item) {
+		this.selectedItem = item;
+		updateSidebarEquipButton();
+
+		if (item != null) {
+			// Trigger on-demand package download and load if not yet in registry
+			if (CosmeticRegistry.get(item.id()).isEmpty()) {
+				catalogManager.setDownloadState(item.id(), CosmeticCatalogManager.DownloadState.DOWNLOADING);
+				assetDownloader.downloadAndLoadPackageAsync(item).whenComplete((cosmetic, ex) -> {
+					if (ex != null) {
+						catalogManager.setDownloadState(item.id(), CosmeticCatalogManager.DownloadState.FAILED);
+					} else {
+						catalogManager.setDownloadState(item.id(), CosmeticCatalogManager.DownloadState.READY);
+					}
+					updateSidebarEquipButton();
+				});
+			}
+		}
+	}
+
+	private void updateSidebarEquipButton() {
+		if (this.sidebarEquipButton == null) return;
+		if (this.selectedItem == null) {
+			this.sidebarEquipButton.active = false;
+			this.sidebarEquipButton.setMessage(Text.literal("Equip Cosmetic"));
+			return;
+		}
+
+		boolean isEquipped = isEquipped(this.selectedItem);
+		this.sidebarEquipButton.active = true;
+		this.sidebarEquipButton.setMessage(Text.literal(isEquipped ? "Unequip Cosmetic" : "Equip Cosmetic"));
+	}
+
+	private boolean isEquipped(CatalogItem item) {
+		Cosmetic equipped = clientCosmeticManager.getEquipped(item.category());
+		return equipped != null && equipped.getId().equals(item.id());
+	}
+
+	private void toggleEquipSelected() {
+		if (this.selectedItem == null) return;
+		if (isEquipped(this.selectedItem)) {
+			clientCosmeticManager.unequip(this.selectedItem.category());
+		} else {
+			Optional<Cosmetic> cosmeticOpt = CosmeticRegistry.get(this.selectedItem.id());
+			if (cosmeticOpt.isPresent()) {
+				clientCosmeticManager.equip(cosmeticOpt.get());
+			} else {
+				// Ensure downloaded first then equip
+				assetDownloader.downloadAndLoadPackageAsync(this.selectedItem).thenAccept(cosmetic -> {
+					if (this.client != null) {
+						this.client.execute(() -> {
+							clientCosmeticManager.equip(cosmetic);
+							updateSidebarEquipButton();
+						});
+					}
+				});
+			}
+		}
+		updateSidebarEquipButton();
+		if (this.listWidget != null) {
+			this.listWidget.refresh();
+		}
+	}
+
+	@Override
+	public void close() {
+		if (this.client != null) {
+			this.client.setScreen(this.parent);
+		}
+	}
+
+	@Override
+	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+		// 1. Native Minecraft Screen Background (in-game transparent overlay or title panorama)
+		super.render(context, mouseX, mouseY, delta);
+
+		// 2. Title & Subtitle with native Minecraft styling
+		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFFA0);
+
+		// 3. Isolated 3D Preview Sidebar Container
+		int previewW = this.previewRight - this.previewLeft;
+		int previewH = this.previewBottom - this.previewTop;
+
+		// Subtle outline around isolated preview box
+		context.fill(this.previewLeft, this.previewTop, this.previewRight, this.previewBottom, 0x44000000);
+		context.drawStrokedRectangle(this.previewLeft, this.previewTop, previewW, previewH, 0x33AAAAAA);
+
+		// Render 3D Isolated Model
+		renderIsolatedPreview(context, delta);
+
+		// 4. Render Selected Item Metadata below 3D preview
+		if (this.selectedItem != null) {
+			int textX = this.previewLeft + 6;
+			int textY = this.previewBottom + 6;
+
+			context.drawTextWithShadow(this.textRenderer, Text.literal("§l" + this.selectedItem.name()), textX, textY, 0xFFFFFFFF);
+			context.drawTextWithShadow(this.textRenderer, Text.literal("§7Category: §f" + this.selectedItem.category().getDisplayName()), textX, textY + 12, 0xFFAAAAAA);
+			context.drawTextWithShadow(this.textRenderer, Text.literal("§7By: §e" + this.selectedItem.author()), textX, textY + 24, 0xFF888888);
+
+			if (!this.selectedItem.description().isBlank()) {
+				String desc = this.selectedItem.description();
+				if (this.textRenderer.getWidth(desc) > previewW - 12) {
+					desc = this.textRenderer.trimToWidth(desc, previewW - 16) + "...";
+				}
+				context.drawTextWithShadow(this.textRenderer, Text.literal("§8" + desc), textX, textY + 36, 0xFF777777);
+			}
+		} else {
+			context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7No cosmetic selected"), this.previewLeft + previewW / 2, this.previewTop + previewH / 2, 0xFF888888);
+		}
+	}
+
+	private void renderIsolatedPreview(DrawContext context, float delta) {
+		int previewW = this.previewRight - this.previewLeft;
+		int previewH = this.previewBottom - this.previewTop;
+
+		if (this.selectedItem == null) {
+			return;
+		}
+
+		Optional<Cosmetic> cosmeticOpt = CosmeticRegistry.get(this.selectedItem.id());
+		if (cosmeticOpt.isEmpty()) {
+			CosmeticCatalogManager.DownloadState state = catalogManager.getDownloadState(this.selectedItem.id());
+			String statusText = switch (state) {
+				case DOWNLOADING -> "§eDownloading 3D Model...";
+				case FAILED -> "§cFailed to load model";
+				default -> "§7Click to load preview";
+			};
+			context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(statusText), this.previewLeft + previewW / 2, this.previewTop + previewH / 2, 0xFFAAAAAA);
+			return;
+		}
+
+		Cosmetic cosmetic = cosmeticOpt.get();
+		IsolatedCosmeticRenderState state = new IsolatedCosmeticRenderState(cosmetic);
+
+		int baseSize = (int) (previewH / 2.2f);
+		int previewSize = Math.max(25, Math.min(80, (int) (baseSize * this.previewZoom)));
+
+		// 360° Drag Rotation (Pitch + Yaw)
+		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+		rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
+		rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
+
+		Vector3f offset = new Vector3f(0.0F, state.height / 2.0F - 0.05F, 0.0F);
+
+		// Render through Minecraft's official 3D GUI pipeline with scissor clipping
+		context.addEntity(
+				state,
+				(float) previewSize,
+				offset,
+				rotation,
+				new Quaternionf(),
+				this.previewLeft + 2,
+				this.previewTop + 2,
+				this.previewRight - 2,
+				this.previewBottom - 2
+		);
+
+		// Orbit hint
+		context.drawCenteredTextWithShadow(
+				this.textRenderer,
+				Text.literal("§8◀ Drag to Rotate 360° ▶"),
+				this.previewLeft + previewW / 2,
+				this.previewBottom - 12,
+				0xFF555555
+		);
+	}
+
+	@Override
+	public boolean mouseClicked(Click click, boolean bl) {
+		if (click.x() >= this.previewLeft && click.x() <= this.previewRight
+				&& click.y() >= this.previewTop && click.y() <= this.previewBottom) {
+			this.draggingPreview = true;
+			this.lastMouseX = click.x();
+			this.lastMouseY = click.y();
+			return true;
+		}
+		return super.mouseClicked(click, bl);
+	}
+
+	@Override
+	public boolean mouseReleased(Click click) {
+		this.draggingPreview = false;
+		return super.mouseReleased(click);
+	}
+
+	@Override
+	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+		if (this.draggingPreview) {
+			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 0.4f;
+			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.4f));
+			this.lastMouseX = click.x();
+			this.lastMouseY = click.y();
+			return true;
+		}
+		return super.mouseDragged(click, deltaX, deltaY);
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+		if (mouseX >= this.previewLeft && mouseX <= this.previewRight
+				&& mouseY >= this.previewTop && mouseY <= this.previewBottom) {
+			this.previewZoom = (float) Math.max(0.6, Math.min(1.8, this.previewZoom + verticalAmount * 0.08));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+	}
+
+	/**
+	 * Scrollable list of compact cosmetic cards.
+	 */
+	public class CatalogListWidget extends AlwaysSelectedEntryListWidget<CatalogListWidget.Entry> {
+
+		public CatalogListWidget(MinecraftClient client, int width, int height, int y, int itemHeight) {
+			super(client, width, height, y, itemHeight);
+		}
+
+		public void setItems(List<CatalogItem> items) {
+			clearEntries();
+			for (CatalogItem item : items) {
+				addEntry(new Entry(item));
+			}
+		}
+
+		public void refresh() {
+			// Trigger re-render of rows
+		}
+
+		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
+			private final CatalogItem item;
+			private Identifier cachedThumbId;
+
+			public Entry(CatalogItem item) {
+				this.item = item;
+				// Asynchronously request static thumbnail without blocking render thread
+				assetDownloader.loadThumbnailAsync(item).thenAccept(id -> this.cachedThumbId = id);
+			}
+
+			public CatalogItem getItem() {
+				return item;
+			}
+
+			@Override
+			public Text getNarration() {
+				return Text.literal(this.item.name());
+			}
+
+			@Override
+			public void render(DrawContext context, int y, int x, boolean hovered, float tickProgress) {
+				int entryX = getX();
+				int entryY = getY();
+				int entryWidth = getWidth();
+				int entryHeight = getHeight();
+
+				boolean isSelected = (selectedItem != null && selectedItem.id().equals(this.item.id()));
+				boolean isEquipped = isEquipped(this.item);
+
+				// Selection & Hover background highlight
+				if (isSelected) {
+					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x40335577);
+					context.drawStrokedRectangle(entryX, entryY, entryWidth, entryHeight, 0x5566AACC);
+				} else if (hovered) {
+					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x20FFFFFF);
+				}
+
+				// 1. Static Thumbnail box (24x24)
+				int thumbX = entryX + 4;
+				int thumbY = entryY + 5;
+				int thumbSize = 24;
+
+				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
+				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isEquipped ? 0x8844FF44 : 0x44888888);
+
+				Identifier thumbToDraw = this.cachedThumbId != null ? this.cachedThumbId : CosmeticAssetDownloader.getDefaultPlaceholderId();
+				context.drawTexture(
+						RenderPipelines.GUI_TEXTURED,
+						thumbToDraw,
+						thumbX + 2,
+						thumbY + 2,
+						0.0F,
+						0.0F,
+						thumbSize - 4,
+						thumbSize - 4,
+						thumbSize - 4,
+						thumbSize - 4
+				);
+
+				// 2. Cosmetic Name
+				int textX = thumbX + thumbSize + 6;
+				context.drawTextWithShadow(
+						textRenderer,
+						Text.literal(this.item.name()),
+						textX,
+						entryY + 5,
+						isSelected ? 0xFFFFFFA0 : 0xFFFFFFFF
+				);
+
+				// 3. Category & Status
+				String catTag = "§7[" + this.item.category().getDisplayName() + "] ";
+				String status = isEquipped ? "§a✔ Equipped" : (CosmeticRegistry.get(this.item.id()).isPresent() ? "§7● Ready" : "§b☁ Download");
+				context.drawTextWithShadow(
+						textRenderer,
+						Text.literal(catTag + status),
+						textX,
+						entryY + 17,
+						0xFFAAAAAA
+				);
+
+				// 4. Compact Equip button at far right
+				int btnW = 38;
+				int btnH = 16;
+				int btnX = entryX + entryWidth - btnW - 6;
+				int btnY = entryY + 9;
+
+				int btnBg = isEquipped ? 0xAA442222 : 0xAA224422;
+				int btnBorder = isEquipped ? 0xAAFF5555 : 0xAA55FF55;
+				context.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnBg);
+				context.drawStrokedRectangle(btnX, btnY, btnW, btnH, btnBorder);
+				context.drawCenteredTextWithShadow(
+						textRenderer,
+						Text.literal(isEquipped ? "Off" : "Equip"),
+						btnX + btnW / 2,
+						btnY + 4,
+						isEquipped ? 0xFFFF8888 : 0xFF88FF88
+				);
+			}
+
+			@Override
+			public boolean mouseClicked(Click click, boolean bl) {
+				int entryX = getX();
+				int entryY = getY();
+				int entryWidth = getWidth();
+				int btnW = 38;
+				int btnH = 16;
+				int btnX = entryX + entryWidth - btnW - 6;
+				int btnY = entryY + 9;
+
+				// Clicking Equip button toggles equip directly
+				if (click.x() >= btnX && click.x() <= btnX + btnW && click.y() >= btnY && click.y() <= btnY + btnH) {
+					selectItem(this.item);
+					toggleEquipSelected();
+					return true;
+				}
+
+				// Clicking anywhere else on row selects it for preview
+				selectItem(this.item);
+				return true;
+			}
+		}
+	}
+}
+
