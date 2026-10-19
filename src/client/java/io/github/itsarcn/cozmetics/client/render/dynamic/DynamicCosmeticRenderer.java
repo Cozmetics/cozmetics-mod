@@ -41,9 +41,9 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 
 	@Override
 	public void addRenderData(DynamicCosmeticAnimatable animatable, @Nullable PlayerEntityRenderState relatedObject, GeoRenderState renderState, float partialTick) {
-		// Drive animation playback using continuous real-time so cosmetics animate in preview menus,
-		// when singleplayer is paused, and in-game without hitching.
-		double realTimeTick = (System.currentTimeMillis() % 100000000L) / 50.0;
+		boolean isThumbnail = (relatedObject instanceof io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState iso && iso.isThumbnail());
+		// Drive animation playback using continuous real-time for live previews and in-game, or freeze at 0 for static thumbnails
+		double realTimeTick = isThumbnail ? 0.0 : (System.currentTimeMillis() % 100000000L) / 50.0;
 		renderState.addGeckolibData(software.bernie.geckolib.constant.DataTickets.TICK, realTimeTick);
 
 		boolean isIsolated = relatedObject instanceof io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;

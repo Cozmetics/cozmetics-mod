@@ -363,4 +363,42 @@ public class ZipPackagePipelineTest {
 
 		tracker.clearAll();
 	}
+
+	@Test
+	void testRealCosmeticsPackagesValidationAndLoading(@TempDir Path tempDir) throws Exception {
+		Path runPackagesDir = Path.of("run/cozmetics/cache/packages");
+		Path runMetadataFile = Path.of("run/cozmetics/cache/metadata/catalogue.json");
+
+		assertTrue(Files.exists(runMetadataFile), "catalogue.json must exist in run cache");
+
+		String jsonStr = Files.readString(runMetadataFile, StandardCharsets.UTF_8);
+		com.google.gson.JsonArray array = com.google.gson.JsonParser.parseString(jsonStr).getAsJsonArray();
+		assertEquals(4, array.size(), "Should have exactly 4 items in catalogue.json");
+
+		for (com.google.gson.JsonElement elem : array) {
+			CatalogItem item = CatalogItem.fromJson(elem.getAsJsonObject());
+			Path zipPath = runPackagesDir.resolve(CosmeticCacheManager.sanitizeIdentifier(item.id()) + ".zip");
+			assertTrue(Files.exists(zipPath), "ZIP package must exist: " + zipPath);
+
+			// 1. Test real package validation
+			var valResult = CosmeticPackageValidator.validatePackage(zipPath, item.hash());
+			assertTrue(valResult.valid(), "Package " + item.id() + " must pass validation: " + valResult.message());
+
+			// 2. Test extraction and loading
+			Path extractTarget = tempDir.resolve("extracted_" + CosmeticCacheManager.sanitizeIdentifier(item.id()));
+			Cosmetic loaded = CosmeticPackageLoader.loadPackage(
+					zipPath,
+					extractTarget,
+					item.name(),
+					item.category(),
+					item.hash()
+			);
+
+			assertNotNull(loaded);
+			assertEquals(item.id(), loaded.getId());
+			assertEquals(item.name(), loaded.getName());
+			assertEquals(item.category(), loaded.getCategory());
+			assertTrue(CosmeticRegistry.get(loaded.getId()).isPresent());
+		}
+	}
 }

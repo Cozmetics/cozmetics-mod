@@ -14,10 +14,16 @@ import net.minecraft.util.Arm;
  */
 public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 	private final Cosmetic cosmetic;
+	private final boolean thumbnail;
 
 	public IsolatedCosmeticRenderState(Cosmetic cosmetic) {
+		this(cosmetic, false);
+	}
+
+	public IsolatedCosmeticRenderState(Cosmetic cosmetic, boolean thumbnail) {
 		super();
 		this.cosmetic = cosmetic;
+		this.thumbnail = thumbnail;
 
 		// Set player model completely invisible
 		this.invisible = true;
@@ -38,8 +44,8 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 		this.rightArmPose = BipedEntityModel.ArmPose.EMPTY;
 		this.preferredArm = Arm.RIGHT;
 
-		// Real-time animation progress
-		this.age = (System.currentTimeMillis() % 100000000L) / 50.0f;
+		// Real-time animation progress (frozen at frame 0 for static thumbnails)
+		this.age = thumbnail ? 0.0f : (System.currentTimeMillis() % 100000000L) / 50.0f;
 		this.bodyYaw = 180.0f;
 		this.relativeHeadYaw = 0.0f;
 		this.pitch = 0.0f;
@@ -50,6 +56,10 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 
 	public Cosmetic getCosmetic() {
 		return cosmetic;
+	}
+
+	public boolean isThumbnail() {
+		return thumbnail;
 	}
 }
 

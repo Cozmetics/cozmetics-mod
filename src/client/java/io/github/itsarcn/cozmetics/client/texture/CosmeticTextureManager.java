@@ -72,6 +72,10 @@ public final class CosmeticTextureManager implements AutoCloseable {
 				// Register in Minecraft TextureManager on main thread if available
 				if (tm != null) {
 					tm.registerTexture(frameId, texture);
+					// Also register under baseId for frame 0 (so any model/renderer querying baseId directly finds it)
+					if (i == 0) {
+						tm.registerTexture(baseId, texture);
+					}
 				}
 			}
 			this.totalDurationMs = Math.max(1, total);
@@ -105,7 +109,7 @@ public final class CosmeticTextureManager implements AutoCloseable {
 				return baseId;
 			}
 			if (frameIds.size() == 1) {
-				return frameIds.getFirst();
+				return baseId;
 			}
 
 			long modulo = Math.abs(timeMs) % totalDurationMs;
@@ -151,6 +155,17 @@ public final class CosmeticTextureManager implements AutoCloseable {
 
 	private TextureEntry loadTextureInternal(Identifier id) {
 		MinecraftClient client = MinecraftClient.getInstance();
+		if (client != null && !client.isOnThread()) {
+			try {
+				return client.submit(() -> createTextureEntryInternal(id, client)).get(15, java.util.concurrent.TimeUnit.SECONDS);
+			} catch (Exception e) {
+				Cozmetics.LOGGER.error("Failed to load texture on render thread for '{}': {}", id, e.getMessage());
+			}
+		}
+		return createTextureEntryInternal(id, client);
+	}
+
+	private TextureEntry createTextureEntryInternal(Identifier id, MinecraftClient client) {
 		TextureManager tm = client != null ? client.getTextureManager() : null;
 
 		// 1. Try reading from Minecraft ResourceManager
@@ -187,19 +202,39 @@ public final class CosmeticTextureManager implements AutoCloseable {
 
 	/**
 	 * Explicitly loads an image file from disk and associates it with an Identifier.
+	 *
+	 * Decodes image on the calling thread, then safely registers the GPU texture on the
+	 * Minecraft render thread to prevent OpenGL threading violations.
 	 */
 	public TextureEntry loadFromFile(Identifier id, Path filePath) throws Exception {
 		MinecraftClient client = MinecraftClient.getInstance();
-		TextureManager tm = client != null ? client.getTextureManager() : null;
 
 		try (InputStream in = Files.newInputStream(filePath)) {
 			DecodedImage decoded = UniversalImageDecoder.decode(in, filePath.toString());
-			TextureEntry entry = new TextureEntry(id, decoded, tm);
-			TextureEntry prev = textures.put(id, entry);
-			if (prev != null) {
-				prev.close();
+
+			if (client != null && !client.isOnThread()) {
+				try {
+					return client.submit(() -> {
+						TextureEntry entry = new TextureEntry(id, decoded, client.getTextureManager());
+						TextureEntry prev = textures.put(id, entry);
+						if (prev != null) {
+							prev.close();
+						}
+						return entry;
+					}).get(15, java.util.concurrent.TimeUnit.SECONDS);
+				} catch (Exception e) {
+					Cozmetics.LOGGER.error("Failed to upload texture on render thread for '{}': {}", id, e.getMessage());
+					throw e;
+				}
+			} else {
+				TextureManager tm = client != null ? client.getTextureManager() : null;
+				TextureEntry entry = new TextureEntry(id, decoded, tm);
+				TextureEntry prev = textures.put(id, entry);
+				if (prev != null) {
+					prev.close();
+				}
+				return entry;
 			}
-			return entry;
 		}
 	}
 

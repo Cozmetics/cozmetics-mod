@@ -415,12 +415,14 @@ public class CosmeticCatalogScreen extends Screen {
 
 		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
 			private final CatalogItem item;
-			private Identifier cachedThumbId;
+			private IsolatedCosmeticRenderState thumbnailRenderState;
 
 			public Entry(CatalogItem item) {
 				this.item = item;
-				// Asynchronously request static thumbnail without blocking render thread
-				assetDownloader.loadThumbnailAsync(item).thenAccept(id -> this.cachedThumbId = id);
+				// Ensure cosmetic package is loaded into runtime registry so 3D thumbnail can render immediately
+				if (CosmeticRegistry.get(item.id()).isEmpty()) {
+					assetDownloader.downloadAndLoadPackageAsync(item);
+				}
 			}
 
 			public CatalogItem getItem() {
@@ -450,27 +452,47 @@ public class CosmeticCatalogScreen extends Screen {
 					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x20FFFFFF);
 				}
 
-				// 1. Static Thumbnail box (24x24)
+				// 1. Rendered 3D Thumbnail box (26x26)
 				int thumbX = entryX + 4;
-				int thumbY = entryY + 5;
-				int thumbSize = 24;
+				int thumbY = entryY + 4;
+				int thumbSize = 26;
 
 				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
-				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isEquipped ? 0x8844FF44 : 0x44888888);
+				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isEquipped ? 0x8844FF44 : (isSelected ? 0x8866AACC : 0x44888888));
 
-				Identifier thumbToDraw = this.cachedThumbId != null ? this.cachedThumbId : CosmeticAssetDownloader.getDefaultPlaceholderId();
-				context.drawTexture(
-						RenderPipelines.GUI_TEXTURED,
-						thumbToDraw,
-						thumbX + 2,
-						thumbY + 2,
-						0.0F,
-						0.0F,
-						thumbSize - 4,
-						thumbSize - 4,
-						thumbSize - 4,
-						thumbSize - 4
-				);
+				Optional<Cosmetic> cosmeticOpt = CosmeticRegistry.get(this.item.id());
+				if (cosmeticOpt.isPresent()) {
+					if (this.thumbnailRenderState == null || !this.thumbnailRenderState.getCosmetic().getId().equals(this.item.id())) {
+						this.thumbnailRenderState = new IsolatedCosmeticRenderState(cosmeticOpt.get(), true);
+					}
+
+					int listTop = listWidget.getY();
+					int listBottom = listWidget.getY() + listWidget.getHeight();
+					int clipMinY = Math.max(listTop + 1, thumbY + 1);
+					int clipMaxY = Math.min(listBottom - 1, thumbY + thumbSize - 1);
+
+					if (clipMinY < clipMaxY && thumbY + thumbSize > listTop && thumbY < listBottom) {
+						Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+						rotation.rotateX((float) Math.toRadians(12.0f));
+						rotation.rotateY((float) Math.toRadians(35.0f));
+
+						Vector3f offset = new Vector3f(0.0F, this.thumbnailRenderState.height / 2.0F - 0.05F, 0.0F);
+
+						context.addEntity(
+								this.thumbnailRenderState,
+								13.0f,
+								offset,
+								rotation,
+								new Quaternionf(),
+								thumbX + 1,
+								clipMinY,
+								thumbX + thumbSize - 1,
+								clipMaxY
+						);
+					}
+				} else {
+					context.drawCenteredTextWithShadow(textRenderer, Text.literal("§83D"), thumbX + thumbSize / 2, thumbY + thumbSize / 2 - 4, 0xFF666666);
+				}
 
 				// 2. Cosmetic Name
 				int textX = thumbX + thumbSize + 6;

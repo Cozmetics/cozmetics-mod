@@ -55,4 +55,20 @@ public class UniversalImagePipelineTest {
 			assertNotNull(img.getFrameAt(0).image());
 		}
 	}
+
+	@Test
+	void testRealCosmeticWebpDecoding() throws Exception {
+		java.nio.file.Path webpFile = java.nio.file.Path.of("run/cozmetics/cache/extracted/cozmetics_demon_scythe/texture.webp");
+		if (java.nio.file.Files.exists(webpFile)) {
+			byte[] bytes = java.nio.file.Files.readAllBytes(webpFile);
+			try (DecodedImage img = UniversalImageDecoder.decode(bytes, "demon_scythe.webp")) {
+				assertNotNull(img);
+				assertTrue(img.getWidth() > 0, "Width should be > 0: " + img.getWidth());
+				assertTrue(img.getHeight() > 0, "Height should be > 0: " + img.getHeight());
+				assertTrue(img.getFormat() == ImageFormat.WEBP || img.getFormat() == ImageFormat.ANIMATED_WEBP);
+				assertTrue(img.getFrameCount() >= 1);
+				assertNotNull(img.getFrameAt(0).image());
+			}
+		}
+	}
 }

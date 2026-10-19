@@ -88,26 +88,34 @@ public class CosmeticAssetDownloader {
 					return CosmeticPackageLoader.loadFromExtracted(extractedDir, item.name(), item.category());
 				}
 
-				// 2. Download ZIP package
-				if (item.packageUrl() == null || item.packageUrl().isBlank()) {
-					throw new IllegalStateException("No package URL provided for cosmetic " + id);
-				}
-
-				Cozmetics.LOGGER.info("Downloading cosmetic package for '{}' from {}", id, item.packageUrl());
-				HttpRequest request = HttpRequest.newBuilder()
-						.uri(URI.create(item.packageUrl()))
-						.timeout(Duration.ofSeconds(20))
-						.GET()
-						.build();
-
-				HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-				if (response.statusCode() < 200 || response.statusCode() >= 300) {
-					throw new IOException("HTTP download failed with status " + response.statusCode());
-				}
-
-				byte[] zipBytes = response.body();
 				Path zipPath = cacheManager.getPackageFile(id);
-				Files.write(zipPath, zipBytes);
+
+				// 2. Check if package zip already exists in local packages cache
+				if (!Files.exists(zipPath)) {
+					if (item.packageUrl() == null || item.packageUrl().isBlank()) {
+						throw new IllegalStateException("No package URL or local package found for cosmetic " + id);
+					}
+
+					byte[] zipBytes;
+					if (item.packageUrl().startsWith("file:")) {
+						Path localSource = Path.of(URI.create(item.packageUrl()));
+						zipBytes = Files.readAllBytes(localSource);
+					} else {
+						Cozmetics.LOGGER.info("Downloading cosmetic package for '{}' from {}", id, item.packageUrl());
+						HttpRequest request = HttpRequest.newBuilder()
+								.uri(URI.create(item.packageUrl()))
+								.timeout(Duration.ofSeconds(20))
+								.GET()
+								.build();
+
+						HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+						if (response.statusCode() < 200 || response.statusCode() >= 300) {
+							throw new IOException("HTTP download failed with status " + response.statusCode());
+						}
+						zipBytes = response.body();
+					}
+					Files.write(zipPath, zipBytes);
+				}
 
 				// 3. Clean old extracted folder and extract new verified package
 				cacheManager.cleanExtracted(id);
@@ -166,15 +174,23 @@ public class CosmeticAssetDownloader {
 					return getDefaultPlaceholderId();
 				}
 
-				HttpRequest request = HttpRequest.newBuilder()
-						.uri(URI.create(item.thumbnailUrl()))
-						.timeout(Duration.ofSeconds(10))
-						.GET()
-						.build();
+				byte[] bytes;
+				if (item.thumbnailUrl().startsWith("file:")) {
+					Path localThumb = Path.of(URI.create(item.thumbnailUrl()));
+					bytes = Files.readAllBytes(localThumb);
+				} else {
+					HttpRequest request = HttpRequest.newBuilder()
+							.uri(URI.create(item.thumbnailUrl()))
+							.timeout(Duration.ofSeconds(10))
+							.GET()
+							.build();
 
-				HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-				if (response.statusCode() == 200) {
-					byte[] bytes = response.body();
+					HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+					if (response.statusCode() != 200) {
+						return getDefaultPlaceholderId();
+					}
+					bytes = response.body();
+				}
 					ImageFormat format = ImageFormat.detect(bytes);
 					String ext = (format == ImageFormat.WEBP) ? "webp" : "png";
 					Path targetFile = cacheManager.getThumbnailFile(id, ext);
@@ -182,7 +198,6 @@ public class CosmeticAssetDownloader {
 
 					CosmeticTextureManager.getInstance().loadFromFile(thumbId, targetFile);
 					return thumbId;
-				}
 			} catch (Exception e) {
 				Cozmetics.LOGGER.debug("Thumbnail fetch failed for '{}': {}", id, e.getMessage());
 			}
