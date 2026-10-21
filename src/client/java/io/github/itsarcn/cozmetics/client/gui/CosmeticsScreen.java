@@ -1,6 +1,7 @@
 package io.github.itsarcn.cozmetics.client.gui;
 
 import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
+import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
@@ -117,10 +118,16 @@ public class CosmeticsScreen extends Screen {
 
 	private void showAll() {
 		ClientCosmeticManager.getInstance().showAll();
+		if (this.listWidget != null) {
+			this.listWidget.refresh();
+		}
 	}
 
 	private void hideAll() {
 		ClientCosmeticManager.getInstance().hideAll();
+		if (this.listWidget != null) {
+			this.listWidget.refresh();
+		}
 	}
 
 	@Override
@@ -191,7 +198,7 @@ public class CosmeticsScreen extends Screen {
 
 		int previewHeight = this.previewBottom - this.previewTop;
 		int baseSize = (int) (previewHeight / 3.25f);
-		int previewSize = Math.max(30, Math.min(85, (int) (baseSize * this.previewZoom)));
+		int previewSize = Math.max(25, Math.min(300, (int) (baseSize * this.previewZoom)));
 
 		// Full 360-degree rotation: Pitch (vertical tilt) + Yaw (horizontal orbit)
 		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
@@ -272,6 +279,12 @@ public class CosmeticsScreen extends Screen {
 	public boolean mouseClicked(Click click, boolean bl) {
 		if (click.x() >= this.previewLeft && click.x() <= this.previewRight
 				&& click.y() >= this.previewTop && click.y() <= this.previewBottom) {
+			if (bl) { // double click resets zoom and orbit
+				this.previewZoom = 1.0f;
+				this.previewRotationYaw = 0.0f;
+				this.previewRotationPitch = 0.0f;
+				return true;
+			}
 			this.draggingPreview = true;
 			this.lastMouseX = click.x();
 			this.lastMouseY = click.y();
@@ -304,7 +317,7 @@ public class CosmeticsScreen extends Screen {
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
 		if (mouseX >= this.previewLeft && mouseX <= this.previewRight
 				&& mouseY >= this.previewTop && mouseY <= this.previewBottom) {
-			this.previewZoom = (float) Math.max(0.65, Math.min(1.5, this.previewZoom + verticalAmount * 0.08));
+			this.previewZoom = (float) Math.max(0.35, Math.min(4.5, this.previewZoom + verticalAmount * 0.12));
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -328,6 +341,7 @@ public class CosmeticsScreen extends Screen {
 
 		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
 			private final Cosmetic cosmetic;
+			private IsolatedCosmeticRenderState thumbnailRenderState;
 
 			public Entry(Cosmetic cosmetic) {
 				this.cosmetic = cosmetic;
@@ -368,38 +382,42 @@ public class CosmeticsScreen extends Screen {
 					context.drawCenteredTextWithShadow(textRenderer, Text.literal("—"), checkX + 7, checkY + 3, 0xFF777777);
 				}
 
-				// 2. Thumbnail box at [entryX + 22, entryY + 4], size 22x22
+				// 2. 3D Rendered Miniature Thumbnail box at [entryX + 22, entryY + 4], size 24x24
 				int thumbX = entryX + 22;
 				int thumbY = entryY + 4;
-				int thumbSize = 22;
+				int thumbSize = 24;
 
-				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x88111111);
+				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
 				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
 
-				Identifier baseTex = this.cosmetic.getTexturePath();
-				var manager = io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager.getInstance();
-				var entry = manager.getOrLoadTexture(baseTex);
-				Identifier texture;
-				if (entry != null && entry.isAnimated()) {
-					texture = entry.getFrameAt(System.currentTimeMillis());
-				} else if (this.cosmetic.getTextureFrameCount() > 1) {
-					int frame = (int) ((System.currentTimeMillis() / this.cosmetic.getTextureFrameDurationMs()) % this.cosmetic.getTextureFrameCount());
-					texture = this.cosmetic.getTexturePath(frame);
-				} else {
-					texture = baseTex;
+				if (this.thumbnailRenderState == null || !this.thumbnailRenderState.getCosmetic().getId().equals(this.cosmetic.getId())) {
+					this.thumbnailRenderState = new IsolatedCosmeticRenderState(this.cosmetic, true);
 				}
-				context.drawTexture(
-						RenderPipelines.GUI_TEXTURED,
-						texture,
-						thumbX + 2,
-						thumbY + 2,
-						0.0F,
-						0.0F,
-						thumbSize - 4,
-						thumbSize - 4,
-						thumbSize - 4,
-						thumbSize - 4
-				);
+
+				int listTop = listWidget.getY();
+				int listBottom = listWidget.getY() + listWidget.getHeight();
+				int clipMinY = Math.max(listTop + 1, thumbY + 1);
+				int clipMaxY = Math.min(listBottom - 1, thumbY + thumbSize - 1);
+
+				if (clipMinY < clipMaxY && thumbY + thumbSize > listTop && thumbY < listBottom) {
+					Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+					rotation.rotateX((float) Math.toRadians(12.0f));
+					rotation.rotateY((float) Math.toRadians(35.0f));
+
+					Vector3f offset = this.thumbnailRenderState.getIsolatedPreviewOffset();
+
+					context.addEntity(
+							this.thumbnailRenderState,
+							11.0f,
+							offset,
+							rotation,
+							new Quaternionf(),
+							thumbX + 1,
+							clipMinY,
+							thumbX + thumbSize - 1,
+							clipMaxY
+					);
+				}
 
 				// 3. Dedicated "Solo" Button at far right
 				int soloW = 32;

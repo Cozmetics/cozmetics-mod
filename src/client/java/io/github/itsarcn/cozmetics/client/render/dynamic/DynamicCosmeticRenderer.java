@@ -33,6 +33,9 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 
 	@Override
 	public long getInstanceId(DynamicCosmeticAnimatable animatable, @Nullable PlayerEntityRenderState relatedObject) {
+		if (relatedObject instanceof io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState iso) {
+			return (long) iso.id;
+		}
 		return relatedObject != null ? (long) relatedObject.id : 0L;
 	}
 
@@ -52,8 +55,8 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 
 	@Override
 	public @Nullable RenderLayer getRenderType(GeoRenderState renderState, Identifier texture) {
-		// Use entityCutout (with backface culling) to prevent coplanar Z-fighting artifacts on 2D quads
-		return RenderLayers.entityCutout(texture);
+		// Disable backface culling so flat 2D quads (e.g. scythe blades, wings, thin geometries) are visible from both sides
+		return RenderLayers.entityCutoutNoCull(texture);
 	}
 
 	@Override
@@ -63,15 +66,11 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		boolean isIsolated = Boolean.TRUE.equals(renderPassInfo.getGeckolibData(IS_ISOLATED));
 
 		if (isIsolated) {
-			// Center the cosmetic in isolated sidebar preview depending on its slot
-			float centerY = switch (this.cosmetic.getAttachmentSlot()) {
-				case HEAD -> 0.4F;
-				case LEGS -> 1.2F;
-				case BODY -> 0.85F;
-				case ARMS -> 0.9F;
-				case PET -> 1.1F;
-			};
-			poseStack.translate(0.0F, centerY, 0.0F);
+			// Center pets horizontally if they are modeled with a shoulder offset in Bedrock coordinates
+			if (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) {
+				poseStack.translate(0.40F, 0.0F, 0.0F);
+			}
+			poseStack.translate(0.0F, 1.5F, 0.0F);
 		} else {
 			// Feature rendering space: base of player model.
 			// Translate to player origin (feet to neck = 1.5 blocks)

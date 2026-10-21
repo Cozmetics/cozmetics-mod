@@ -65,7 +65,8 @@ public class CosmeticFeatureRenderer extends FeatureRenderer<PlayerEntityRenderS
 			}
 
 			// Local client item-level visibility toggle
-			if (playerUuid != null && mc != null && mc.player != null && playerUuid.equals(mc.player.getUuid())) {
+			boolean isLocalPlayer = (playerUuid == null) || (mc != null && mc.player != null && playerUuid.equals(mc.player.getUuid()));
+			if (isLocalPlayer) {
 				if (!manager.isCosmeticVisible(equipped.getId())) {
 					continue;
 				}

@@ -174,12 +174,15 @@ public class ClientCosmeticManager {
 	public synchronized void equip(Cosmetic cosmetic) {
 		if (cosmetic != null && cosmetic.getCategory().isEnabled()) {
 			this.equippedCosmetics.put(cosmetic.getCategory(), cosmetic);
+			this.hiddenCosmetics.remove(cosmetic.getId());
 			save();
 		}
 	}
 
 	public synchronized void unequip(CosmeticCategory category) {
-		if (this.equippedCosmetics.remove(category) != null) {
+		Cosmetic removed = this.equippedCosmetics.remove(category);
+		if (removed != null) {
+			this.hiddenCosmetics.remove(removed.getId());
 			save();
 		}
 	}

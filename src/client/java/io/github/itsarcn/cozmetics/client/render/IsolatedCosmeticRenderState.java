@@ -44,6 +44,12 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 		this.rightArmPose = BipedEntityModel.ArmPose.EMPTY;
 		this.preferredArm = Arm.RIGHT;
 
+		// Distinct entity render IDs so GeckoLib instances and animation controllers
+		// never clash or reset timelines between thumbnails and sidebar preview
+		this.id = thumbnail
+				? -100000 - Math.abs(cosmetic.getId().hashCode() % 100000)
+				: 100000 + Math.abs(cosmetic.getId().hashCode() % 100000);
+
 		// Real-time animation progress (frozen at frame 0 for static thumbnails)
 		this.age = thumbnail ? 0.0f : (System.currentTimeMillis() % 100000000L) / 50.0f;
 		this.bodyYaw = 180.0f;
@@ -60,6 +66,20 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 
 	public boolean isThumbnail() {
 		return thumbnail;
+	}
+
+	/**
+	 * Returns the model-space offset point that should be centered at the viewport center
+	 * and used as the pivot for 3D orbital mouse rotation.
+	 */
+	public org.joml.Vector3f getIsolatedPreviewOffset() {
+		return switch (this.cosmetic.getAttachmentSlot()) {
+			case HEAD -> new org.joml.Vector3f(0.0F, 1.70F, 0.0F);
+			case BODY -> new org.joml.Vector3f(0.0F, 1.35F, 0.0F);
+			case PET -> new org.joml.Vector3f(0.0F, 1.35F, 0.0F);
+			case ARMS -> new org.joml.Vector3f(0.0F, 1.25F, 0.0F);
+			case LEGS -> new org.joml.Vector3f(0.0F, 0.65F, 0.0F);
+		};
 	}
 }
 
