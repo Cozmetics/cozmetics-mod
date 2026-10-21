@@ -95,7 +95,7 @@ public class CosmeticCatalogScreen extends Screen {
 		this.colMidX = this.colLeftX + this.colLeftW + 8;
 		this.colMidW = Math.max(120, this.colRightX - 8 - this.colMidX);
 
-		int commonTop = 22;
+		int commonTop = 26;
 		int commonBottom = this.height - 34;
 
 		// 1. LEFT COLUMN: 3D Isolated Preview Box & Details & Equip button
@@ -106,7 +106,7 @@ public class CosmeticCatalogScreen extends Screen {
 
 		int equipBtnH = 20;
 		int equipBtnY = commonBottom - equipBtnH;
-		int detailsH = 44;
+		int detailsH = 46;
 		this.previewBottom = Math.max(this.previewTop + 60, equipBtnY - detailsH - 4);
 
 		this.sidebarEquipButton = ButtonWidget.builder(
@@ -129,7 +129,7 @@ public class CosmeticCatalogScreen extends Screen {
 		this.searchBox.setChangedListener(query -> refreshList());
 		addDrawableChild(this.searchBox);
 
-		int listTop = 44;
+		int listTop = commonTop + 22;
 		int listHeight = Math.max(60, commonBottom - listTop);
 
 		this.listWidget = new CatalogListWidget(
@@ -143,19 +143,45 @@ public class CosmeticCatalogScreen extends Screen {
 		addDrawableChild(this.listWidget);
 
 		// 3. RIGHT COLUMN: Vertical Category Selection Stack
-		int availableCatHeight = commonBottom - commonTop;
-		int maxCatButtons = 9;
-		int catBtnH = Math.max(16, Math.min(20, (availableCatHeight - ((maxCatButtons - 1) * 2)) / maxCatButtons));
-		int catSpacing = catBtnH + 2;
+		// Dynamically distributed so the first button starts at commonTop and the last ends at commonBottom
+		int totalAvailableH = commonBottom - commonTop;
+		int numButtons = 9;
+		int minGap = 2;
+		int totalGaps = (numButtons - 1) * minGap;
+		int totalBtnSpace = totalAvailableH - totalGaps;
+		int baseBtnH = totalBtnSpace / numButtons;
+
+		int[] btnHeights = new int[numButtons];
+		int[] btnGaps = new int[numButtons - 1];
+
+		if (baseBtnH <= 20) {
+			int remainder = totalBtnSpace % numButtons;
+			for (int i = 0; i < numButtons; i++) {
+				btnHeights[i] = baseBtnH + (i < remainder ? 1 : 0);
+			}
+			Arrays.fill(btnGaps, minGap);
+		} else {
+			// Height is ample: keep buttons at clean 20px height and distribute extra spacing evenly
+			Arrays.fill(btnHeights, 20);
+			int remainingSpace = totalAvailableH - (numButtons * 20);
+			int gap = remainingSpace / (numButtons - 1);
+			int gapRemainder = remainingSpace % (numButtons - 1);
+			for (int i = 0; i < numButtons - 1; i++) {
+				btnGaps[i] = gap + (i < gapRemainder ? 1 : 0);
+			}
+		}
 
 		int currCatY = commonTop;
+		int btnIndex = 0;
+
 		ButtonWidget allBtn = ButtonWidget.builder(
 				getCategoryTabText(null, "All"),
 				btn -> selectCategory(null)
-		).dimensions(this.colRightX, currCatY, this.colRightW, catBtnH).build();
+		).dimensions(this.colRightX, currCatY, this.colRightW, btnHeights[btnIndex]).build();
 		addDrawableChild(allBtn);
 		this.categoryButtons.add(new CategoryButton(allBtn, null, "All"));
-		currCatY += catSpacing;
+		currCatY += btnHeights[btnIndex] + btnGaps[btnIndex];
+		btnIndex++;
 
 		CosmeticCategory[] displayOrder = new CosmeticCategory[] {
 				CosmeticCategory.PET,
@@ -170,15 +196,18 @@ public class CosmeticCatalogScreen extends Screen {
 
 		for (CosmeticCategory cat : displayOrder) {
 			if (!cat.isEnabled()) continue;
-			if (currCatY + catBtnH > commonBottom + 2) break;
+			int h = btnHeights[btnIndex];
 			String label = cat.getDisplayName();
 			ButtonWidget catBtn = ButtonWidget.builder(
 					getCategoryTabText(cat, label),
 					btn -> selectCategory(cat)
-			).dimensions(this.colRightX, currCatY, this.colRightW, catBtnH).build();
+			).dimensions(this.colRightX, currCatY, this.colRightW, h).build();
 			addDrawableChild(catBtn);
 			this.categoryButtons.add(new CategoryButton(catBtn, cat, label));
-			currCatY += catSpacing;
+			if (btnIndex < numButtons - 1) {
+				currCatY += h + btnGaps[btnIndex];
+			}
+			btnIndex++;
 		}
 
 		// 4. BOTTOM CENTER: Done / Back Button
@@ -296,13 +325,11 @@ public class CosmeticCatalogScreen extends Screen {
 		// 1. Native Minecraft Screen Background (in-game transparent overlay or title panorama)
 		super.render(context, mouseX, mouseY, delta);
 
-		// 2. Title & Column Headers with native Minecraft styling
-		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFFA0);
-
-		// Column section labels
-		context.drawTextWithShadow(this.textRenderer, Text.literal("§7Preview"), this.colLeftX + 2, 10, 0xFFAAAAAA);
-		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§7Catalogue"), this.colMidX + this.colMidW / 2, 10, 0xFFAAAAAA);
-		context.drawTextWithShadow(this.textRenderer, Text.literal("§7Categories"), this.colRightX + 2, 10, 0xFFAAAAAA);
+		// 2. Synchronized column headers on the exact same line at y = 12
+		int headerY = 12;
+		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Preview"), this.colLeftX + this.colLeftW / 2, headerY, 0xFFFFFFFF);
+		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Catalogue"), this.colMidX + this.colMidW / 2, headerY, 0xFFFFFFFF);
+		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Categories"), this.colRightX + this.colRightW / 2, headerY, 0xFFFFFFFF);
 
 		// 3. Isolated 3D Preview Sidebar Container (Left column)
 		int previewW = this.previewRight - this.previewLeft;
