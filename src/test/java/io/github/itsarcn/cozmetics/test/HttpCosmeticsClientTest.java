@@ -80,5 +80,13 @@ public class HttpCosmeticsClientTest {
 			future.get(3, TimeUnit.SECONDS);
 		});
 	}
+
+	@Test
+	void testApiUrlAndLocalhostToggle() {
+		assertTrue(HttpCosmeticsClient.USE_LOCALHOST);
+		assertEquals("http://localhost:3001", HttpCosmeticsClient.LOCALHOST_API_URL);
+		assertEquals("https://catalog.cozmetics.arcn.online", HttpCosmeticsClient.PRODUCTION_API_URL);
+		assertEquals("http://localhost:3001", HttpCosmeticsClient.DEFAULT_API_BASE_URL);
+	}
 }
 

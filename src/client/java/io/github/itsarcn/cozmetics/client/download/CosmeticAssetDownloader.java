@@ -57,7 +57,6 @@ public class CosmeticAssetDownloader {
 		});
 
 		this.httpClient = HttpClient.newBuilder()
-				.executor(this.executor)
 				.connectTimeout(Duration.ofSeconds(10))
 				.followRedirects(HttpClient.Redirect.NORMAL)
 				.build();

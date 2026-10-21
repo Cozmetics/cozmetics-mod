@@ -5,6 +5,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.itsarcn.cozmetics.Cozmetics;
+import io.github.itsarcn.cozmetics.catalog.CatalogItem;
+import io.github.itsarcn.cozmetics.client.catalog.CosmeticCatalogManager;
 import io.github.itsarcn.cozmetics.cosmetic.AttachmentSlot;
 import io.github.itsarcn.cozmetics.cosmetic.AttachmentTransform;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
@@ -39,7 +41,10 @@ import java.util.concurrent.Executors;
  * the Minecraft render thread.
  */
 public class HttpCosmeticsClient {
-	public static final String DEFAULT_API_BASE_URL = "http://localhost:3001/api/v1";
+	public static final boolean USE_LOCALHOST = true;
+	public static final String PRODUCTION_API_URL = "https://catalog.cozmetics.arcn.online";
+	public static final String LOCALHOST_API_URL = "http://localhost:3001";
+	public static final String DEFAULT_API_BASE_URL = USE_LOCALHOST ? LOCALHOST_API_URL : PRODUCTION_API_URL;
 
 	private static HttpCosmeticsClient instance;
 
@@ -193,40 +198,19 @@ public class HttpCosmeticsClient {
 						JsonObject item = elem.getAsJsonObject();
 
 						try {
-							String idStr = item.get("id").getAsString();
-							Identifier id = idStr.contains(":") ? Identifier.of(idStr) : Identifier.of("cozmetics", idStr);
-							String name = item.get("name").getAsString();
-							String catStr = item.get("category").getAsString();
-							CosmeticCategory cat = CosmeticCategory.valueOf(catStr);
-
-							if (!cat.isEnabled()) continue;
-
-							CosmeticDefinition.Builder builder = CosmeticDefinition.builder(id, cat, name);
-
-							// Slot
-							if (item.has("slot")) {
-								try {
-									builder.slot(AttachmentSlot.valueOf(item.get("slot").getAsString()));
-								} catch (Exception ignored) {
-								}
+							CatalogItem catalogItem = CatalogItem.fromJson(item);
+							if (!catalogItem.category().isEnabled()) {
+								continue;
 							}
 
-							// Transform
-							if (item.has("transform") && item.get("transform").isJsonObject()) {
-								JsonObject t = item.getAsJsonObject("transform");
-								float translateY = t.has("translate_y") ? t.get("translate_y").getAsFloat() : 0.0f;
-								float scale = t.has("scale") ? t.get("scale").getAsFloat() : 1.0f;
-								boolean staticLighting = t.has("static_lighting") && t.get("static_lighting").getAsBoolean();
-								builder.transform(new AttachmentTransform(translateY, scale, staticLighting));
-							}
-
-							CosmeticRegistry.register(builder.build());
+							CosmeticCatalogManager.getInstance().addItem(catalogItem);
 							count++;
 						} catch (Exception e) {
 							Cozmetics.LOGGER.warn("Failed to parse mod cosmetic: {}", elem, e);
 						}
 					}
 
+					CosmeticCatalogManager.getInstance().saveCachedCatalogue();
 					Cozmetics.LOGGER.info("Synchronized {} cosmetics from backend API.", count);
 					return count;
 				})

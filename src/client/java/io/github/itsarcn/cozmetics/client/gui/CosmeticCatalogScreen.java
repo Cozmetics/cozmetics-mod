@@ -9,6 +9,7 @@ import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticRegistry;
+import io.github.itsarcn.cozmetics.network.HttpCosmeticsClient;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
@@ -210,11 +211,30 @@ public class CosmeticCatalogScreen extends Screen {
 			btnIndex++;
 		}
 
-		// 4. BOTTOM CENTER: Done / Back Button
+		// 4. BOTTOM CENTER: Done / Back Button & Sync Button
 		ButtonWidget doneButton = ButtonWidget.builder(Text.literal("Done"), btn -> close())
 				.dimensions(this.width / 2 - 50, this.height - 26, 100, 20)
 				.build();
 		addDrawableChild(doneButton);
+
+		ButtonWidget syncButton = ButtonWidget.builder(
+				Text.literal("↻ Sync"),
+				btn -> {
+					btn.active = false;
+					btn.setMessage(Text.literal("Syncing..."));
+					HttpCosmeticsClient.getInstance().syncCatalogue().whenComplete((count, ex) -> {
+						if (this.client != null) {
+							this.client.execute(() -> {
+								btn.active = true;
+								btn.setMessage(Text.literal("↻ Sync"));
+								this.catalogManager.loadCachedCatalogue();
+								refreshList();
+							});
+						}
+					});
+				}
+		).dimensions(this.width / 2 + 54, this.height - 26, 60, 20).build();
+		addDrawableChild(syncButton);
 
 		refreshList();
 	}

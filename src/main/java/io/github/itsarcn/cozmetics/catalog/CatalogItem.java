@@ -42,9 +42,11 @@ public record CatalogItem(
 
 		String version = json.has("version") ? json.get("version").getAsString() : "1.0.0";
 		String hash = json.has("hash") && !json.get("hash").isJsonNull() ? json.get("hash").getAsString() : null;
-		String packageUrl = json.has("package_url") ? json.get("package_url").getAsString() : "";
+		String packageUrl = json.has("package_url") ? json.get("package_url").getAsString()
+				: (json.has("packageUrl") ? json.get("packageUrl").getAsString() : "");
 		String thumbUrl = json.has("thumbnail_url") && !json.get("thumbnail_url").isJsonNull()
-				? json.get("thumbnail_url").getAsString() : null;
+				? json.get("thumbnail_url").getAsString()
+				: (json.has("thumbnailUrl") && !json.get("thumbnailUrl").isJsonNull() ? json.get("thumbnailUrl").getAsString() : null);
 
 		String desc = json.has("description") ? json.get("description").getAsString() : "";
 		String author = json.has("author") ? json.get("author").getAsString() : "Cozmetics";

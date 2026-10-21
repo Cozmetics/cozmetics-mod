@@ -32,7 +32,8 @@ public final class CosmeticPackageValidator {
 	public static final int MAX_ENTRY_COUNT = 60;
 
 	private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-			"json", "bbmodel", "png", "webp", "mcmeta"
+			"json", "bbmodel", "png", "webp", "mcmeta",
+			"gif", "apng", "jpg", "jpeg", "bmp", "tiff"
 	);
 
 	public record ValidationResult(boolean valid, String message) {
