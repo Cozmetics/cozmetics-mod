@@ -71,15 +71,12 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 	/**
 	 * Returns the model-space offset point that should be centered at the viewport center
 	 * and used as the pivot for 3D orbital mouse rotation.
+	 *
+	 * Since the isolated renderer centers the cosmetic directly at (0, 0, 0), the offset
+	 * is (0, 0, 0) so the orbital rotation pivots precisely around the cosmetic's center.
 	 */
 	public org.joml.Vector3f getIsolatedPreviewOffset() {
-		return switch (this.cosmetic.getAttachmentSlot()) {
-			case HEAD -> new org.joml.Vector3f(0.0F, 1.70F, 0.0F);
-			case BODY -> new org.joml.Vector3f(0.0F, 1.35F, 0.0F);
-			case PET -> new org.joml.Vector3f(0.0F, 1.35F, 0.0F);
-			case ARMS -> new org.joml.Vector3f(0.0F, 1.25F, 0.0F);
-			case LEGS -> new org.joml.Vector3f(0.0F, 0.65F, 0.0F);
-		};
+		return new org.joml.Vector3f(0.0F, 0.0F, 0.0F);
 	}
 }
 

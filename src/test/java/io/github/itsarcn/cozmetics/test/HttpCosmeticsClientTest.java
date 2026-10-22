@@ -83,10 +83,10 @@ public class HttpCosmeticsClientTest {
 
 	@Test
 	void testApiUrlAndLocalhostToggle() {
-		assertTrue(HttpCosmeticsClient.USE_LOCALHOST);
+		assertFalse(HttpCosmeticsClient.USE_LOCALHOST);
 		assertEquals("http://localhost:3001", HttpCosmeticsClient.LOCALHOST_API_URL);
-		assertEquals("https://catalog.cozmetics.arcn.online", HttpCosmeticsClient.PRODUCTION_API_URL);
-		assertEquals("http://localhost:3001", HttpCosmeticsClient.DEFAULT_API_BASE_URL);
+		assertEquals("https://cozmetics.arcn.online", HttpCosmeticsClient.PRODUCTION_API_URL);
+		assertEquals("https://cozmetics.arcn.online", HttpCosmeticsClient.DEFAULT_API_BASE_URL);
 	}
 }
 

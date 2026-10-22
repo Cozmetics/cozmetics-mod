@@ -7,6 +7,7 @@ import io.github.itsarcn.cozmetics.client.pack.CosmeticPackageLoader;
 import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.client.texture.ImageFormat;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
+import io.github.itsarcn.cozmetics.network.HttpCosmeticsClient;
 import net.minecraft.util.Identifier;
 
 import java.io.IOException;
@@ -96,13 +97,14 @@ public class CosmeticAssetDownloader {
 					}
 
 					byte[] zipBytes;
-					if (item.packageUrl().startsWith("file:")) {
-						Path localSource = Path.of(URI.create(item.packageUrl()));
+					String packageUrl = resolveUrl(item.packageUrl());
+					if (packageUrl.startsWith("file:")) {
+						Path localSource = Path.of(URI.create(packageUrl));
 						zipBytes = Files.readAllBytes(localSource);
 					} else {
-						Cozmetics.LOGGER.info("Downloading cosmetic package for '{}' from {}", id, item.packageUrl());
+						Cozmetics.LOGGER.info("Downloading cosmetic package for '{}' from {}", id, packageUrl);
 						HttpRequest request = HttpRequest.newBuilder()
-								.uri(URI.create(item.packageUrl()))
+								.uri(URI.create(packageUrl))
 								.timeout(Duration.ofSeconds(20))
 								.GET()
 								.build();
@@ -174,12 +176,13 @@ public class CosmeticAssetDownloader {
 				}
 
 				byte[] bytes;
-				if (item.thumbnailUrl().startsWith("file:")) {
-					Path localThumb = Path.of(URI.create(item.thumbnailUrl()));
+				String thumbUrl = resolveUrl(item.thumbnailUrl());
+				if (thumbUrl.startsWith("file:")) {
+					Path localThumb = Path.of(URI.create(thumbUrl));
 					bytes = Files.readAllBytes(localThumb);
 				} else {
 					HttpRequest request = HttpRequest.newBuilder()
-							.uri(URI.create(item.thumbnailUrl()))
+							.uri(URI.create(thumbUrl))
 							.timeout(Duration.ofSeconds(10))
 							.GET()
 							.build();
@@ -207,6 +210,30 @@ public class CosmeticAssetDownloader {
 		activeThumbnailDownloads.put(id, future);
 		future.whenComplete((res, ex) -> activeThumbnailDownloads.remove(id));
 		return future;
+	}
+
+	private String resolveUrl(String rawUrl) {
+		if (rawUrl == null || rawUrl.isBlank()) return rawUrl;
+		String activeBase = "https://cozmetics.arcn.online";
+		try {
+			activeBase = HttpCosmeticsClient.getInstance().getBaseUrl();
+		} catch (Throwable ignored) {
+		}
+
+		if (rawUrl.contains("catalog.cozmetics.arcn.online")) {
+			rawUrl = rawUrl.replace("https://catalog.cozmetics.arcn.online", activeBase)
+					.replace("http://catalog.cozmetics.arcn.online", activeBase);
+		} else if (rawUrl.startsWith("/")) {
+			rawUrl = activeBase + rawUrl;
+		}
+
+		if (HttpCosmeticsClient.USE_LOCALHOST) {
+			if (rawUrl.contains("cozmetics.arcn.online")) {
+				rawUrl = rawUrl.replace("https://cozmetics.arcn.online", activeBase)
+						.replace("http://cozmetics.arcn.online", activeBase);
+			}
+		}
+		return rawUrl;
 	}
 
 	public static Identifier getDefaultPlaceholderId() {

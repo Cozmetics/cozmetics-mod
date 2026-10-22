@@ -41,8 +41,8 @@ import java.util.concurrent.Executors;
  * the Minecraft render thread.
  */
 public class HttpCosmeticsClient {
-	public static final boolean USE_LOCALHOST = true;
-	public static final String PRODUCTION_API_URL = "https://catalog.cozmetics.arcn.online";
+	public static final boolean USE_LOCALHOST = false;
+	public static final String PRODUCTION_API_URL = "https://cozmetics.arcn.online";
 	public static final String LOCALHOST_API_URL = "http://localhost:3001";
 	public static final String DEFAULT_API_BASE_URL = USE_LOCALHOST ? LOCALHOST_API_URL : PRODUCTION_API_URL;
 

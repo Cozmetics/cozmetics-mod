@@ -2,6 +2,7 @@ package io.github.itsarcn.cozmetics.catalog;
 
 import com.google.gson.JsonObject;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
+import io.github.itsarcn.cozmetics.network.HttpCosmeticsClient;
 import net.minecraft.util.Identifier;
 import org.jspecify.annotations.Nullable;
 
@@ -47,6 +48,39 @@ public record CatalogItem(
 		String thumbUrl = json.has("thumbnail_url") && !json.get("thumbnail_url").isJsonNull()
 				? json.get("thumbnail_url").getAsString()
 				: (json.has("thumbnailUrl") && !json.get("thumbnailUrl").isJsonNull() ? json.get("thumbnailUrl").getAsString() : null);
+
+		String activeBase = "https://cozmetics.arcn.online";
+		try {
+			activeBase = HttpCosmeticsClient.getInstance().getBaseUrl();
+		} catch (Throwable ignored) {
+		}
+
+		if (packageUrl.contains("catalog.cozmetics.arcn.online")) {
+			packageUrl = packageUrl.replace("https://catalog.cozmetics.arcn.online", activeBase)
+					.replace("http://catalog.cozmetics.arcn.online", activeBase);
+		} else if (packageUrl.startsWith("/")) {
+			packageUrl = activeBase + packageUrl;
+		}
+
+		if (thumbUrl != null) {
+			if (thumbUrl.contains("catalog.cozmetics.arcn.online")) {
+				thumbUrl = thumbUrl.replace("https://catalog.cozmetics.arcn.online", activeBase)
+						.replace("http://catalog.cozmetics.arcn.online", activeBase);
+			} else if (thumbUrl.startsWith("/")) {
+				thumbUrl = activeBase + thumbUrl;
+			}
+		}
+
+		if (HttpCosmeticsClient.USE_LOCALHOST) {
+			if (packageUrl.contains("cozmetics.arcn.online")) {
+				packageUrl = packageUrl.replace("https://cozmetics.arcn.online", activeBase)
+						.replace("http://cozmetics.arcn.online", activeBase);
+			}
+			if (thumbUrl != null && thumbUrl.contains("cozmetics.arcn.online")) {
+				thumbUrl = thumbUrl.replace("https://cozmetics.arcn.online", activeBase)
+						.replace("http://cozmetics.arcn.online", activeBase);
+			}
+		}
 
 		String desc = json.has("description") ? json.get("description").getAsString() : "";
 		String author = json.has("author") ? json.get("author").getAsString() : "Cozmetics";

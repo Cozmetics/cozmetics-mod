@@ -66,11 +66,17 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		boolean isIsolated = Boolean.TRUE.equals(renderPassInfo.getGeckolibData(IS_ISOLATED));
 
 		if (isIsolated) {
-			// Center pets horizontally if they are modeled with a shoulder offset in Bedrock coordinates
-			if (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) {
-				poseStack.translate(0.40F, 0.0F, 0.0F);
-			}
-			poseStack.translate(0.0F, 1.5F, 0.0F);
+			// Center the cosmetic at (0, 0, 0) so orbital rotation pivots EXACTLY around its center
+			float centerY = switch (this.cosmetic.getAttachmentSlot()) {
+				case HEAD -> 1.75F;
+				case BODY -> 1.15F;
+				case PET -> 1.25F;
+				case ARMS -> 0.90F;
+				case LEGS -> 0.20F;
+			};
+			float centerX = (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) ? -0.38F : 0.0F;
+
+			poseStack.translate(centerX, centerY, 0.0F);
 		} else {
 			// Feature rendering space: base of player model.
 			// Translate to player origin (feet to neck = 1.5 blocks)

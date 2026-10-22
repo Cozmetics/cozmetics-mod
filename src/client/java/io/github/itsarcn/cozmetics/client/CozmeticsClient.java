@@ -30,16 +30,16 @@ public class CozmeticsClient implements ClientModInitializer {
 		// Trigger non-blocking asynchronous catalogue sync on client startup
 		HttpCosmeticsClient.getInstance().syncCatalogue();
 
-		// Add "✦ Cozmetics" button in the pause menu (GameMenuScreen) and title screen (TitleScreen)
+		// Add "Cozmetics" button in the pause menu (GameMenuScreen) and title screen (TitleScreen)
 		ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
 			if (screen instanceof GameMenuScreen || screen instanceof TitleScreen) {
 				int buttonWidth = 100;
 				int buttonHeight = 20;
-				int buttonX = screen.width - buttonWidth - 10;
+				int buttonX = 10;
 				int buttonY = 10;
 
 				ButtonWidget cozmeticsButton = ButtonWidget.builder(
-						Text.literal("✦ Cozmetics"),
+						Text.literal("Cozmetics"),
 						btn -> client.setScreen(new CosmeticsScreen(screen))
 				).dimensions(buttonX, buttonY, buttonWidth, buttonHeight).build();
 

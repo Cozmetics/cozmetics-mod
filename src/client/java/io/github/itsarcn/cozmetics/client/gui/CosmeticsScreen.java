@@ -1,7 +1,11 @@
 package io.github.itsarcn.cozmetics.client.gui;
 
+import io.github.itsarcn.cozmetics.catalog.CatalogItem;
+import io.github.itsarcn.cozmetics.client.catalog.CosmeticCatalogManager;
 import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
+import io.github.itsarcn.cozmetics.client.download.CosmeticAssetDownloader;
 import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
+import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
@@ -22,6 +26,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Dedicated Cozmetics Wardrobe Screen.
@@ -341,10 +346,11 @@ public class CosmeticsScreen extends Screen {
 
 		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
 			private final Cosmetic cosmetic;
-			private IsolatedCosmeticRenderState thumbnailRenderState;
 
 			public Entry(Cosmetic cosmetic) {
 				this.cosmetic = cosmetic;
+				Optional<CatalogItem> catalogItem = CosmeticCatalogManager.getInstance().getItem(cosmetic.getId());
+				catalogItem.ifPresent(item -> CosmeticAssetDownloader.getInstance().loadThumbnailAsync(item));
 			}
 
 			@Override
@@ -382,7 +388,7 @@ public class CosmeticsScreen extends Screen {
 					context.drawCenteredTextWithShadow(textRenderer, Text.literal("—"), checkX + 7, checkY + 3, 0xFF777777);
 				}
 
-				// 2. 3D Rendered Miniature Thumbnail box at [entryX + 22, entryY + 4], size 24x24
+				// 2. 2D Thumbnail box from backend at [entryX + 22, entryY + 4], size 24x24
 				int thumbX = entryX + 22;
 				int thumbY = entryY + 4;
 				int thumbSize = 24;
@@ -390,33 +396,22 @@ public class CosmeticsScreen extends Screen {
 				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
 				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
 
-				if (this.thumbnailRenderState == null || !this.thumbnailRenderState.getCosmetic().getId().equals(this.cosmetic.getId())) {
-					this.thumbnailRenderState = new IsolatedCosmeticRenderState(this.cosmetic, true);
-				}
-
-				int listTop = listWidget.getY();
-				int listBottom = listWidget.getY() + listWidget.getHeight();
-				int clipMinY = Math.max(listTop + 1, thumbY + 1);
-				int clipMaxY = Math.min(listBottom - 1, thumbY + thumbSize - 1);
-
-				if (clipMinY < clipMaxY && thumbY + thumbSize > listTop && thumbY < listBottom) {
-					Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
-					rotation.rotateX((float) Math.toRadians(12.0f));
-					rotation.rotateY((float) Math.toRadians(35.0f));
-
-					Vector3f offset = this.thumbnailRenderState.getIsolatedPreviewOffset();
-
-					context.addEntity(
-							this.thumbnailRenderState,
-							11.0f,
-							offset,
-							rotation,
-							new Quaternionf(),
+				Identifier thumbId = Identifier.of(this.cosmetic.getId().getNamespace(), "textures/thumbnails/" + this.cosmetic.getId().getPath());
+				if (CosmeticTextureManager.getInstance().hasTexture(thumbId)) {
+					context.drawTexture(
+							RenderPipelines.GUI_TEXTURED,
+							thumbId,
 							thumbX + 1,
-							clipMinY,
-							thumbX + thumbSize - 1,
-							clipMaxY
+							thumbY + 1,
+							0.0F,
+							0.0F,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2
 					);
+				} else {
+					context.drawCenteredTextWithShadow(textRenderer, Text.literal("§8..."), thumbX + thumbSize / 2, thumbY + thumbSize / 2 - 4, 0xFF666666);
 				}
 
 				// 3. Dedicated "Solo" Button at far right

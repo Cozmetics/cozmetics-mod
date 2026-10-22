@@ -218,7 +218,7 @@ public class CosmeticCatalogScreen extends Screen {
 		addDrawableChild(doneButton);
 
 		ButtonWidget syncButton = ButtonWidget.builder(
-				Text.literal("↻ Sync"),
+				Text.literal("Sync"),
 				btn -> {
 					btn.active = false;
 					btn.setMessage(Text.literal("Syncing..."));
@@ -226,7 +226,7 @@ public class CosmeticCatalogScreen extends Screen {
 						if (this.client != null) {
 							this.client.execute(() -> {
 								btn.active = true;
-								btn.setMessage(Text.literal("↻ Sync"));
+								btn.setMessage(Text.literal("Sync"));
 								this.catalogManager.loadCachedCatalogue();
 								refreshList();
 							});
@@ -410,8 +410,15 @@ public class CosmeticCatalogScreen extends Screen {
 		Cosmetic cosmetic = cosmeticOpt.get();
 		IsolatedCosmeticRenderState state = new IsolatedCosmeticRenderState(cosmetic, false);
 
-		int baseSize = Math.max(30, (int) (previewH / 2.2f));
-		int previewSize = Math.max(20, Math.min(350, (int) (baseSize * this.previewZoom)));
+		float slotScale = switch (cosmetic.getAttachmentSlot()) {
+			case HEAD -> 1.45f;
+			case LEGS -> 1.55f;
+			case ARMS -> 1.35f;
+			case PET -> 1.30f;
+			case BODY -> 0.95f;
+		};
+		int baseSize = Math.max(30, (int) (previewH / 2.2f * slotScale));
+		int previewSize = Math.max(20, Math.min(380, (int) (baseSize * this.previewZoom)));
 
 		// 360° Drag Rotation (Pitch + Yaw)
 		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
@@ -511,14 +518,11 @@ public class CosmeticCatalogScreen extends Screen {
 
 		public class Entry extends AlwaysSelectedEntryListWidget.Entry<Entry> {
 			private final CatalogItem item;
-			private IsolatedCosmeticRenderState thumbnailRenderState;
 
 			public Entry(CatalogItem item) {
 				this.item = item;
-				// Ensure cosmetic package is loaded into runtime registry so 3D thumbnail can render immediately
-				if (CosmeticRegistry.get(item.id()).isEmpty()) {
-					assetDownloader.downloadAndLoadPackageAsync(item);
-				}
+				// Pull static/rendered thumbnail from backend
+				assetDownloader.loadThumbnailAsync(item);
 			}
 
 			public CatalogItem getItem() {
@@ -548,7 +552,7 @@ public class CosmeticCatalogScreen extends Screen {
 					context.fill(entryX, entryY, entryX + entryWidth, entryY + entryHeight, 0x20FFFFFF);
 				}
 
-				// 1. Rendered 3D Thumbnail box (26x26)
+				// 1. 2D Thumbnail box from backend (26x26)
 				int thumbX = entryX + 4;
 				int thumbY = entryY + 4;
 				int thumbSize = 26;
@@ -556,38 +560,22 @@ public class CosmeticCatalogScreen extends Screen {
 				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
 				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isEquipped ? 0x8844FF44 : (isSelected ? 0x8866AACC : 0x44888888));
 
-				Optional<Cosmetic> cosmeticOpt = CosmeticRegistry.get(this.item.id());
-				if (cosmeticOpt.isPresent()) {
-					if (this.thumbnailRenderState == null || !this.thumbnailRenderState.getCosmetic().getId().equals(this.item.id())) {
-						this.thumbnailRenderState = new IsolatedCosmeticRenderState(cosmeticOpt.get(), true);
-					}
-
-					int listTop = listWidget.getY();
-					int listBottom = listWidget.getY() + listWidget.getHeight();
-					int clipMinY = Math.max(listTop + 1, thumbY + 1);
-					int clipMaxY = Math.min(listBottom - 1, thumbY + thumbSize - 1);
-
-					if (clipMinY < clipMaxY && thumbY + thumbSize > listTop && thumbY < listBottom) {
-						Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
-						rotation.rotateX((float) Math.toRadians(12.0f));
-						rotation.rotateY((float) Math.toRadians(35.0f));
-
-						Vector3f offset = this.thumbnailRenderState.getIsolatedPreviewOffset();
-
-						context.addEntity(
-								this.thumbnailRenderState,
-								11.5f,
-								offset,
-								rotation,
-								new Quaternionf(),
-								thumbX + 1,
-								clipMinY,
-								thumbX + thumbSize - 1,
-								clipMaxY
-						);
-					}
+				Identifier thumbId = Identifier.of(this.item.id().getNamespace(), "textures/thumbnails/" + this.item.id().getPath());
+				if (CosmeticTextureManager.getInstance().hasTexture(thumbId)) {
+					context.drawTexture(
+							RenderPipelines.GUI_TEXTURED,
+							thumbId,
+							thumbX + 1,
+							thumbY + 1,
+							0.0F,
+							0.0F,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2
+					);
 				} else {
-					context.drawCenteredTextWithShadow(textRenderer, Text.literal("§83D"), thumbX + thumbSize / 2, thumbY + thumbSize / 2 - 4, 0xFF666666);
+					context.drawCenteredTextWithShadow(textRenderer, Text.literal("§8..."), thumbX + thumbSize / 2, thumbY + thumbSize / 2 - 4, 0xFF666666);
 				}
 
 				// 2. Cosmetic Name (with safe width trimming)

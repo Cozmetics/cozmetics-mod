@@ -136,6 +136,13 @@ public final class CosmeticTextureManager implements AutoCloseable {
 	}
 
 	/**
+	 * Checks if a texture has been loaded and registered in the GPU cache.
+	 */
+	public boolean hasTexture(Identifier id) {
+		return textures.containsKey(id);
+	}
+
+	/**
 	 * Gets or loads a texture from resources or fallback paths.
 	 */
 	public TextureEntry getOrLoadTexture(Identifier id) {
