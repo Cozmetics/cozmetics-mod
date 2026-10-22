@@ -411,14 +411,14 @@ public class CosmeticCatalogScreen extends Screen {
 		IsolatedCosmeticRenderState state = new IsolatedCosmeticRenderState(cosmetic, false);
 
 		float slotScale = switch (cosmetic.getAttachmentSlot()) {
-			case HEAD -> 1.45f;
-			case LEGS -> 1.55f;
-			case ARMS -> 1.35f;
-			case PET -> 1.30f;
-			case BODY -> 0.95f;
+			case HEAD -> 1.35f;
+			case LEGS -> 1.45f;
+			case ARMS -> 1.25f;
+			case PET -> 1.20f;
+			case BODY -> 0.90f;
 		};
-		int baseSize = Math.max(30, (int) (previewH / 2.2f * slotScale));
-		int previewSize = Math.max(20, Math.min(380, (int) (baseSize * this.previewZoom)));
+		int baseSize = Math.max(25, (int) (previewH / 2.8f * slotScale));
+		int previewSize = Math.max(20, Math.min(260, (int) (baseSize * this.previewZoom)));
 
 		// 360° Drag Rotation (Pitch + Yaw)
 		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);

@@ -1,6 +1,6 @@
 # Cozmetics
 
-[![Build This Minecraft Mod](https://github.com/ItsARCn/cozmetics-mod/actions/workflows/build-mod.yml/badge.svg)](https://github.com/ItsARCn/cozmetics-mod/actions/workflows/build-mod.yml)
+[![Build This Minecraft Mod](https://github.com/Cozmetics/cozmetics-mod/actions/workflows/build-mod.yml/badge.svg)](https://github.com/Cozmetics/cozmetics-mod/actions/workflows/build-mod.yml)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11-brightgreen.svg)](https://www.minecraft.net/)
 [![Fabric Loader](https://img.shields.io/badge/Fabric-0.19.5+-blue.svg)](https://fabricmc.net/)
 [![GeckoLib](https://img.shields.io/badge/GeckoLib-5.4.5-orange.svg)](https://geckolib.com/)
@@ -93,7 +93,7 @@ Compile and remap the production mod JAR:
 
 The resulting JAR will be generated in:
 ```text
-build/libs/cozmetics-1.0.0.jar
+build/libs/cozmetics-1.5.0.jar
 ```
 *(The final shipped JAR has a lightweight footprint of ~1.3 MB with zero demo assets).*
 

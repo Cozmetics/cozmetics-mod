@@ -66,15 +66,16 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		boolean isIsolated = Boolean.TRUE.equals(renderPassInfo.getGeckolibData(IS_ISOLATED));
 
 		if (isIsolated) {
-			// Center the cosmetic at (0, 0, 0) so orbital rotation pivots EXACTLY around its center
+			// Center the cosmetic at (0, 0, 0) so orbital rotation pivots EXACTLY around its center.
+			// Formula: centerY = 1.501F + (Y_bedrock / 16) to cancel LivingEntityRenderer's -1.501F offset.
 			float centerY = switch (this.cosmetic.getAttachmentSlot()) {
-				case HEAD -> 1.75F;
-				case BODY -> 1.15F;
-				case PET -> 1.25F;
-				case ARMS -> 0.90F;
-				case LEGS -> 0.20F;
+				case HEAD -> 3.25F;
+				case BODY -> 2.62F;
+				case PET -> 2.85F;
+				case ARMS -> 2.47F;
+				case LEGS -> 1.69F;
 			};
-			float centerX = (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) ? -0.38F : 0.0F;
+			float centerX = (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) ? -0.40F : 0.0F;
 
 			poseStack.translate(centerX, centerY, 0.0F);
 		} else {
