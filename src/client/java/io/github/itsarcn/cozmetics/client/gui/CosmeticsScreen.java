@@ -308,9 +308,9 @@ public class CosmeticsScreen extends Screen {
 	@Override
 	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
 		if (this.draggingPreview) {
-			// Controlled, smooth rotation sensitivity (0.4f per pixel)
-			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 0.4f;
-			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.4f));
+			// Responsive, smooth rotation sensitivity (1.35f yaw, 0.90f pitch)
+			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 1.35f;
+			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.90f));
 			this.lastMouseX = click.x();
 			this.lastMouseY = click.y();
 			return true;

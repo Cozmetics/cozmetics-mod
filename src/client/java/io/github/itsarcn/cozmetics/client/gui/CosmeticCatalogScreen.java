@@ -4,6 +4,7 @@ import io.github.itsarcn.cozmetics.catalog.CatalogItem;
 import io.github.itsarcn.cozmetics.client.catalog.CosmeticCatalogManager;
 import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
 import io.github.itsarcn.cozmetics.client.download.CosmeticAssetDownloader;
+import io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds;
 import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
 import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
@@ -409,16 +410,15 @@ public class CosmeticCatalogScreen extends Screen {
 
 		Cosmetic cosmetic = cosmeticOpt.get();
 		IsolatedCosmeticRenderState state = new IsolatedCosmeticRenderState(cosmetic, false);
+		CosmeticModelBounds bounds = CosmeticModelBounds.get(cosmetic);
 
-		float slotScale = switch (cosmetic.getAttachmentSlot()) {
-			case HEAD -> 1.35f;
-			case LEGS -> 1.45f;
-			case ARMS -> 1.25f;
-			case PET -> 1.20f;
-			case BODY -> 0.90f;
-		};
-		int baseSize = Math.max(25, (int) (previewH / 2.8f * slotScale));
-		int previewSize = Math.max(20, Math.min(260, (int) (baseSize * this.previewZoom)));
+		// Dynamic model-aware scaling: scales any model (wings, tiny pets, fists, hats)
+		// so its visual bounding box occupies ~65% of viewport width/height, leaving ample margin.
+		float minDimension = Math.min(previewW, previewH);
+		float targetPixels = minDimension * 0.65f;
+		float effectiveSpan = Math.max(0.45f, bounds.maxSpan());
+		int baseSize = (int) Math.max(25, Math.min(160, targetPixels / effectiveSpan));
+		int previewSize = (int) Math.max(20, Math.min(240, (int) (baseSize * this.previewZoom)));
 
 		// 360° Drag Rotation (Pitch + Yaw)
 		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
@@ -477,8 +477,9 @@ public class CosmeticCatalogScreen extends Screen {
 	@Override
 	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
 		if (this.draggingPreview) {
-			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 0.4f;
-			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.4f));
+			// Responsive, smooth rotation sensitivity (1.35f yaw, 0.90f pitch)
+			this.previewRotationYaw += (float) (click.x() - this.lastMouseX) * 1.35f;
+			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (click.y() - this.lastMouseY) * 0.90f));
 			this.lastMouseX = click.x();
 			this.lastMouseY = click.y();
 			return true;

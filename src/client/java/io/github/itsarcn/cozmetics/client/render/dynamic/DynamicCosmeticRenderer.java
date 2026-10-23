@@ -66,18 +66,15 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		boolean isIsolated = Boolean.TRUE.equals(renderPassInfo.getGeckolibData(IS_ISOLATED));
 
 		if (isIsolated) {
-			// Center the cosmetic at (0, 0, 0) so orbital rotation pivots EXACTLY around its center.
-			// Formula: centerY = 1.501F + (Y_bedrock / 16) to cancel LivingEntityRenderer's -1.501F offset.
-			float centerY = switch (this.cosmetic.getAttachmentSlot()) {
-				case HEAD -> 3.25F;
-				case BODY -> 2.62F;
-				case PET -> 2.85F;
-				case ARMS -> 2.47F;
-				case LEGS -> 1.69F;
-			};
-			float centerX = (this.cosmetic.getAttachmentSlot() == AttachmentSlot.PET) ? -0.40F : 0.0F;
+			// Center the cosmetic at (0, 0, 0) dynamically using computed model bounds.
+			// Formula cancels out LivingEntityRenderer's -1.501F offset and aligns geometric center to pivot.
+			io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds bounds =
+					io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(this.cosmetic);
+			float tx = bounds.centerX();
+			float ty = 1.501F + bounds.centerY();
+			float tz = -bounds.centerZ();
 
-			poseStack.translate(centerX, centerY, 0.0F);
+			poseStack.translate(tx, ty, tz);
 		} else {
 			// Feature rendering space: base of player model.
 			// Translate to player origin (feet to neck = 1.5 blocks)
@@ -137,8 +134,15 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 							-playerModel.body.yaw - s.getBone().baseRotY(),
 							playerModel.body.roll - s.getBone().baseRotZ()
 					);
+					s.setTranslation(
+							playerModel.body.originX,
+							playerModel.body.originY - customOffsetY,
+							playerModel.body.originZ
+					);
+				} else {
+					// Pets don't tilt with body pitch/roll, but track sneaking/crouching offset
 					if (playerModel.body.originY != 0.0F || playerModel.body.originZ != 0.0F) {
-						s.setTranslation(playerModel.body.originX, playerModel.body.originY, playerModel.body.originZ);
+						s.setTranslation(0, playerModel.body.originY - customOffsetY, playerModel.body.originZ);
 					}
 				}
 			});

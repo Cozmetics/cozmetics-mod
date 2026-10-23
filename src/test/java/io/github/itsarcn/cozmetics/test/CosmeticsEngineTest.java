@@ -253,4 +253,80 @@ public class CosmeticsEngineTest {
 			assertFalse(depends.has("modmenu"), "ModMenu must NOT be a hard dependency in 'depends'");
 		}
 	}
+
+	@Test
+	void testCosmeticModelBoundsForAnyCosmetic() {
+		// Null safety
+		var defaultBounds = io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(null);
+		assertNotNull(defaultBounds);
+		assertEquals(1.0f, defaultBounds.maxSpan());
+
+		// Test Wings dynamic slot configuration
+		Cosmetic wings = new CosmeticDefinition.Builder(
+				net.minecraft.util.Identifier.of("cozmetics:test_wings"),
+				CosmeticCategory.WINGS,
+				"Dragon Wings"
+		).model(net.minecraft.util.Identifier.of("cozmetics:geo_wings"))
+		 .texture(net.minecraft.util.Identifier.of("cozmetics:tex_wings"))
+		 .build();
+
+		var wingBounds = io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(wings);
+		assertNotNull(wingBounds);
+		assertTrue(wingBounds.maxSpan() >= 2.0f, "Wings must have wide span (>= 2.0f) so they scale properly");
+		assertEquals(0.0f, wingBounds.centerX(), 0.001f, "Wings must be horizontally centered");
+
+		// Test Pet dynamic slot configuration
+		Cosmetic pet = new CosmeticDefinition.Builder(
+				net.minecraft.util.Identifier.of("cozmetics:test_pet"),
+				CosmeticCategory.PET,
+				"Baby Dragon Pet"
+		).model(net.minecraft.util.Identifier.of("cozmetics:geo_pet"))
+		 .texture(net.minecraft.util.Identifier.of("cozmetics:tex_pet"))
+		 .build();
+
+		var petBounds = io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(pet);
+		assertNotNull(petBounds);
+		assertTrue(petBounds.centerX() > 0.0f, "Pet must have positive GeckoLib model centerX to offset shoulder displacement");
+		assertTrue(petBounds.centerY() > 1.5f, "Pet center Y must be hovering above torso");
+
+		// Test Arms (fists)
+		Cosmetic fists = new CosmeticDefinition.Builder(
+				net.minecraft.util.Identifier.of("cozmetics:test_fists"),
+				CosmeticCategory.FISTS,
+				"RGB Fists"
+		).model(net.minecraft.util.Identifier.of("cozmetics:geo_fists"))
+		 .texture(net.minecraft.util.Identifier.of("cozmetics:tex_fists"))
+		 .build();
+
+		var fistBounds = io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(fists);
+		assertNotNull(fistBounds);
+		assertEquals(0.0f, fistBounds.centerX(), 0.001f);
+	}
+
+	@Test
+	void testFromBakedModelCalculation() {
+		// Create a mock model: Cube from (-1.5, 1.0, -0.5) to (1.5, 2.0, 0.5)
+		software.bernie.geckolib.cache.model.GeoVertex v1 = new software.bernie.geckolib.cache.model.GeoVertex(-1.5f, 1.0f, -0.5f, 0, 0);
+		software.bernie.geckolib.cache.model.GeoVertex v2 = new software.bernie.geckolib.cache.model.GeoVertex(1.5f, 2.0f, 0.5f, 1, 1);
+		software.bernie.geckolib.cache.model.GeoQuad quad = new software.bernie.geckolib.cache.model.GeoQuad(
+				new software.bernie.geckolib.cache.model.GeoVertex[]{v1, v2}, 0, 1, 0, net.minecraft.util.math.Direction.UP);
+		software.bernie.geckolib.cache.model.cuboid.GeoCube cube = new software.bernie.geckolib.cache.model.cuboid.GeoCube(
+				new software.bernie.geckolib.cache.model.GeoQuad[]{quad}, net.minecraft.util.math.Vec3d.ZERO, net.minecraft.util.math.Vec3d.ZERO, net.minecraft.util.math.Vec3d.ZERO);
+		software.bernie.geckolib.cache.model.cuboid.CuboidGeoBone bone = new software.bernie.geckolib.cache.model.cuboid.CuboidGeoBone(
+				null, "anchor_body", new software.bernie.geckolib.cache.model.GeoBone[0],
+				new software.bernie.geckolib.cache.model.cuboid.GeoCube[]{cube}, 0, 0, 0, 0, 0, 0);
+		software.bernie.geckolib.cache.model.BakedGeoModel bakedModel = new software.bernie.geckolib.cache.model.BakedGeoModel(
+				new software.bernie.geckolib.cache.model.GeoBone[]{bone}, null);
+
+		var bounds = io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.fromBakedModel(bakedModel);
+		assertNotNull(bounds);
+		assertEquals(0.0f, bounds.centerX(), 0.001f);
+		assertEquals(1.5f, bounds.centerY(), 0.001f);
+		assertEquals(0.0f, bounds.centerZ(), 0.001f);
+		assertEquals(3.0f, bounds.spanX(), 0.001f);
+		assertEquals(1.0f, bounds.spanY(), 0.001f);
+		assertEquals(1.0f, bounds.spanZ(), 0.001f);
+		assertEquals(3.0f, bounds.maxSpan(), 0.001f);
+		assertFalse(bounds.isDefault());
+	}
 }
