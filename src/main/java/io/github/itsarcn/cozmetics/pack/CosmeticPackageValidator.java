@@ -20,7 +20,7 @@ import java.util.zip.ZipInputStream;
  * Enforces:
  * 1. Path traversal protection (preventing ZIP Slip vulnerability).
  * 2. ZIP bomb protection (limiting entry counts and total uncompressed bytes).
- * 3. File extension allowlisting (.json, .bbmodel, .png, .webp, .mcmeta).
+ * 3. File extension allowlisting (.json, .png, .webp, .mcmeta).
  * 4. Manifest presence (manifest.json).
  * 5. SHA-256 integrity verification against catalogue hash.
  */
@@ -32,7 +32,7 @@ public final class CosmeticPackageValidator {
 	public static final int MAX_ENTRY_COUNT = 60;
 
 	private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-			"json", "bbmodel", "png", "webp", "mcmeta",
+			"json", "png", "webp", "mcmeta",
 			"gif", "apng", "jpg", "jpeg", "bmp", "tiff"
 	);
 

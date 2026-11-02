@@ -193,6 +193,10 @@ public class HttpCosmeticsClient {
 					JsonArray array = json.getAsJsonArray("cosmetics");
 					int count = 0;
 
+					if (USE_LOCALHOST || baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1")) {
+						CosmeticCatalogManager.getInstance().clearItems();
+					}
+
 					for (JsonElement elem : array) {
 						if (!elem.isJsonObject()) continue;
 						JsonObject item = elem.getAsJsonObject();

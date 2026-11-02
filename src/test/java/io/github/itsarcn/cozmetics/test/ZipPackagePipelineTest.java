@@ -31,42 +31,26 @@ public class ZipPackagePipelineTest {
 	private static final String BASE64_PNG =
 			"iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAA0SURBVHhe7cEBDQAAAMKg909tDwcUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4DMDy+4AAe7x4Q4AAAAASUVORK5CYII=";
 
-	private static final String SAMPLE_BBMODEL = """
+	private static final String SAMPLE_GEO_JSON = """
 			{
-			  "meta": {"format_version": "4.10", "model_format": "bedrock", "box_uv": true},
-			  "name": "test_wings",
-			  "resolution": {"width": 64, "height": 64},
-			  "elements": [
+			  "format_version": "1.12.0",
+			  "minecraft:geometry": [
 			    {
-			      "name": "wing_left",
-			      "box_uv": true,
-			      "from": [-8, 12, 2],
-			      "to": [0, 20, 3],
-			      "origin": [0, 16, 2],
-			      "uuid": "11111111-2222-3333-4444-555555555555",
-			      "faces": {
-			        "north": {"uv": [0, 0, 8, 8], "texture": 0},
-			        "south": {"uv": [8, 0, 16, 8], "texture": 0}
-			      }
-			    }
-			  ],
-			  "outliner": [
-			    {
-			      "name": "anchor_body",
-			      "origin": [0, 16, 0],
-			      "uuid": "99999999-8888-7777-6666-555555555555",
-			      "children": ["11111111-2222-3333-4444-555555555555"]
-			    }
-			  ],
-			  "textures": [
-			    {
-			      "name": "wings.png",
-			      "uuid": "77777777-6666-5555-4444-333333333333",
-			      "source": "data:image/png;base64,%s"
+			      "description": {
+			        "identifier": "geometry.test_wings",
+			        "texture_width": 64,
+			        "texture_height": 64
+			      },
+			      "bones": [
+			        {
+			          "name": "anchor_body",
+			          "pivot": [0, 24, 0]
+			        }
+			      ]
 			    }
 			  ]
 			}
-			""".formatted(BASE64_PNG);
+			""";
 
 	@BeforeEach
 	void resetRegistry() {
@@ -100,7 +84,7 @@ public class ZipPackagePipelineTest {
 				{
 				  "id": "cozmetics:blaze_wings",
 				  "version": "1.2.0",
-				  "model": "models/wings.bbmodel",
+				  "model": "models/wings.geo.json",
 				  "texture": "textures/wings.png",
 				  "slot": "BODY",
 				  "idle_animation": "animation.wings.idle",
@@ -116,7 +100,7 @@ public class ZipPackagePipelineTest {
 		assertNotNull(manifest);
 		assertEquals(Identifier.of("cozmetics", "blaze_wings"), manifest.id());
 		assertEquals("1.2.0", manifest.version());
-		assertEquals("models/wings.bbmodel", manifest.modelPath());
+		assertEquals("models/wings.geo.json", manifest.modelPath());
 		assertEquals("textures/wings.png", manifest.texturePath());
 		assertEquals(AttachmentSlot.BODY, manifest.slot());
 		assertEquals("animation.wings.idle", manifest.idleAnimationName());
@@ -140,12 +124,12 @@ public class ZipPackagePipelineTest {
 				{
 				  "id": "cozmetics:test_wings",
 				  "version": "1.0.0",
-				  "model": "model.bbmodel",
+				  "model": "model.geo.json",
 				  "texture": "texture.png"
 				}
 				""";
 		byte[] pngBytes = Base64.getDecoder().decode(BASE64_PNG);
-		byte[] zipBytes = createTestZip(manifestJson, "model.bbmodel", SAMPLE_BBMODEL, "texture.png", pngBytes);
+		byte[] zipBytes = createTestZip(manifestJson, "model.geo.json", SAMPLE_GEO_JSON, "texture.png", pngBytes);
 
 		Path zipFile = tempDir.resolve("valid_package.zip");
 		Files.write(zipFile, zipBytes);
@@ -162,11 +146,11 @@ public class ZipPackagePipelineTest {
 				{
 				  "id": "cozmetics:test_wings",
 				  "version": "1.0.0",
-				  "model": "model.bbmodel",
+				  "model": "model.geo.json",
 				  "texture": "texture.png"
 				}
 				""";
-		byte[] zipBytes = createTestZip(manifestJson, "model.bbmodel", SAMPLE_BBMODEL, "texture.png", new byte[]{0});
+		byte[] zipBytes = createTestZip(manifestJson, "model.geo.json", SAMPLE_GEO_JSON, "texture.png", new byte[]{0});
 		Path zipFile = tempDir.resolve("test.zip");
 		Files.write(zipFile, zipBytes);
 
@@ -223,8 +207,8 @@ public class ZipPackagePipelineTest {
 	void testPackageValidatorRejectsMissingManifest(@TempDir Path tempDir) throws Exception {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-			zos.putNextEntry(new ZipEntry("model.bbmodel"));
-			zos.write(SAMPLE_BBMODEL.getBytes(StandardCharsets.UTF_8));
+			zos.putNextEntry(new ZipEntry("model.geo.json"));
+			zos.write(SAMPLE_GEO_JSON.getBytes(StandardCharsets.UTF_8));
 			zos.closeEntry();
 		}
 
@@ -269,7 +253,7 @@ public class ZipPackagePipelineTest {
 				{
 				  "id": "cozmetics:blaze_wings",
 				  "version": "1.0.0",
-				  "model": "wings.bbmodel",
+				  "model": "wings.geo.json",
 				  "texture": "wings.png",
 				  "slot": "BODY",
 				  "transform": {
@@ -280,7 +264,7 @@ public class ZipPackagePipelineTest {
 				}
 				""";
 		byte[] pngBytes = Base64.getDecoder().decode(BASE64_PNG);
-		byte[] zipBytes = createTestZip(manifestJson, "wings.bbmodel", SAMPLE_BBMODEL, "wings.png", pngBytes);
+		byte[] zipBytes = createTestZip(manifestJson, "wings.geo.json", SAMPLE_GEO_JSON, "wings.png", pngBytes);
 
 		Path zipFile = tempDir.resolve("blaze_wings.zip");
 		Files.write(zipFile, zipBytes);
@@ -311,13 +295,13 @@ public class ZipPackagePipelineTest {
 				{
 				  "id": "cozmetics:custom_hat",
 				  "version": "1.0.0",
-				  "model": "hat.bbmodel",
+				  "model": "hat.geo.json",
 				  "texture": "hat.png",
 				  "slot": "HEAD"
 				}
 				""";
 		byte[] pngBytes = Base64.getDecoder().decode(BASE64_PNG);
-		byte[] zipBytes = createTestZip(manifestJson, "hat.bbmodel", SAMPLE_BBMODEL, "hat.png", pngBytes);
+		byte[] zipBytes = createTestZip(manifestJson, "hat.geo.json", SAMPLE_GEO_JSON, "hat.png", pngBytes);
 
 		Path zipFile = tempDir.resolve("hat.zip");
 		Files.write(zipFile, zipBytes);

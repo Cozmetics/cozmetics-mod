@@ -5,14 +5,14 @@
 [![Fabric Loader](https://img.shields.io/badge/Fabric-0.19.5+-blue.svg)](https://fabricmc.net/)
 [![GeckoLib](https://img.shields.io/badge/GeckoLib-5.4.5-orange.svg)](https://geckolib.com/)
 
-**Cozmetics** is a high-performance, client-side cosmetic rendering mod for Minecraft Java Edition built on Fabric and GeckoLib 5. It provides a modular, data-driven engine capable of loading animated 3D models, direct Blockbench (`.bbmodel`) project files, and advanced texture formats (static/animated WebP, APNG, PNG) with full player bone synchronization.
+**Cozmetics** is a high-performance, client-side cosmetic rendering mod for Minecraft Java Edition built on Fabric and GeckoLib 5. It provides a modular, data-driven engine capable of loading animated 3D Bedrock models (.geo.json + .animation.json) and advanced texture formats (static/animated WebP, APNG, PNG) with full player bone synchronization.
 
 ---
 
 ## Key Features
 
 ### 1. Reusable 3D Cosmetic Engine
-- **Data-Driven Architecture**: Clean, extensible cosmetic registry with zero hardcoded demo clutter. Ready for dynamic catalogue synchronization from the future Cozmetics website/backend.
+- **Data-Driven Architecture**: Clean, extensible cosmetic registry with zero hardcoded demo clutter. Ready for dynamic catalogue synchronization from the Cozmetics website/backend.
 - **8 Cosmetic Categories Supported**:
   - **Pets**: Animated companions hovering alongside the player (`AttachmentSlot.PET`).
   - **Wings**: Player-attached back wings moving with flight and sneaking.
@@ -25,14 +25,15 @@
   - *(Capes reserved)*: Strictly disabled (`CAPE.isEnabled() == false`) for now.
 - **Z-Fighting & Culling Protection**: Optimized cutout render passes preventing coplanar depth-fighting artifacts on 2D planes and thin model geometries.
 
-### 2. Direct Blockbench (`.bbmodel`) Support
-- **Native In-Memory Loading**: Directly load original `.bbmodel` project files without manually exporting `.geo.json` or `.animation.json` beforehand:
-  - **Geometry**: Automatically converts cuboids (`from`, `to`, `origin`, `rotation`, `inflate`) and hierarchies into Bedrock 1.12.0 format.
-  - **UV Mapping**: Supports both standard Box UV (`uv_offset`) and explicit per-face UV coordinates.
-  - **Hierarchy & Bones**: Automatically builds parent-child bone trees and preserves anchor bones (`anchor_head`, `anchor_body`, `anchor_leftarm`, `anchor_rightarm`, `anchor_leftleg`, `anchor_rightleg`).
-  - **Embedded Textures**: Automatically decodes embedded `data:image/png;base64` textures directly from `.bbmodel` files into GPU textures.
-  - **Animations**: Translates timeline channels (`rotation`, `position`, `scale`) and keyframe interpolation (`linear`, `catmullrom`, `step`, `bezier`) into Bedrock 1.8.0 animation files.
-- **Standalone Converter Utility**: Includes `BbModelConverter` for build-time or programmatic export of `.bbmodel` files into standalone `.geo.json`, `.animation.json`, and `.png` assets.
+### 2. Standardized Bedrock Geometry & Animation Pipeline
+- **Industry Standard Format**: Uses standard Bedrock Geometry (`.geo.json`) and Bedrock Animation (`.animation.json`) files parsed and cached via GeckoLib:
+  - **Anchor Bones**: Group cubes intended to bind to the player under standard anchor bones:
+    - `anchor_head` — Binds to player head (hats, crowns, masks).
+    - `anchor_body` — Binds to player torso (wings, auras, back gear, pets).
+    - `anchor_leftarm` / `anchor_rightarm` — Binds to player arms (gauntlets, fists).
+    - `anchor_leftleg` / `anchor_rightleg` — Binds to player legs (boots).
+  - **Bone Synchronization**: Real-time position, rotation, crouch, and walking animation tracking.
+  - **Package Pipeline**: Secure ZIP package extraction, manifest validation, and SHA-256 integrity verification.
 
 ### 3. Universal Image & Texture Pipeline
 - **Multi-Format Image Support**: Bundles TwelveMonkeys ImageIO plugins (jar-in-jar with zero native binary dependencies).
@@ -78,7 +79,7 @@
 - Terminal with Git.
 
 ### Run Unit Tests
-The test suite is 100% in-memory and verifies `.bbmodel` parsing, JSON round-trips, configuration serialization, and provider contracts:
+The test suite is 100% in-memory and verifies package validation, ZIP slip/bomb protection, manifest parsing, cache operations, and HTTP client integration:
 
 ```bash
 ./gradlew test
@@ -95,7 +96,7 @@ The resulting JAR will be generated in:
 ```text
 build/libs/cozmetics-1.5.0.jar
 ```
-*(The final shipped JAR has a lightweight footprint of ~1.3 MB with zero demo assets).*
+*(The final shipped JAR has a lightweight footprint of ~1.0 MB with zero demo assets).*
 
 ### Launch Minecraft Client
 Launch a test development client:
@@ -106,19 +107,18 @@ Launch a test development client:
 
 ---
 
-## Blockbench `.bbmodel` Integration Guide
+## Cosmetic Authoring & Anchor Bones
 
-To author cosmetics in Blockbench for Cozmetics:
+To author cosmetics for Cozmetics:
 
-1. **Model Format**: Create a project using **Bedrock Model**, **Generic Model**, or **GeckoLib Animated Model**.
+1. **Model Format**: Export models from Blockbench as Bedrock Geometry (`.geo.json`) and Bedrock Animations (`.animation.json`).
 2. **Anchor Bones**: Group cubes intended to bind to the player under standard anchor bones:
    - `anchor_head` — Binds to player head (hats, crowns, masks).
    - `anchor_body` — Binds to player torso (wings, auras, back gear, pets).
    - `anchor_leftarm` / `anchor_rightarm` — Binds to player arms (gauntlets, fists).
    - `anchor_leftleg` / `anchor_rightleg` — Binds to player legs (boots).
-3. **Textures**: Save textures directly in Blockbench so they are embedded as base64 in the `.bbmodel`, or specify external texture paths.
-4. **Animations**: Add animations (e.g. `animation.idle`) with rotation, position, or scale keyframes.
-5. **Runtime Loading**: Register the model via `BbModelManager.getInstance().load(id, stream)` or convert via `BbModelConverter.convert(inputPath, outputDir)`.
+3. **Textures**: Supported formats include PNG, APNG, WebP (static & animated), GIF, BMP, and TIFF.
+4. **Package Structure**: Bundle files into a ZIP containing `manifest.json`, the `.geo.json` model, texture(s), and optional animation file.
 
 ---
 

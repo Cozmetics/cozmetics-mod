@@ -3,6 +3,7 @@ package io.github.itsarcn.cozmetics.client.render.dynamic;
 import io.github.itsarcn.cozmetics.cosmetic.AttachmentSlot;
 import io.github.itsarcn.cozmetics.cosmetic.AttachmentTransform;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
+import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
@@ -128,7 +129,7 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 				if (isIsolated) {
 					s.setRotation(0, 0, 0);
 					s.setTranslation(0, 0, 0);
-				} else if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET) {
+				} else if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET && this.cosmetic.getCategory() != CosmeticCategory.PET) {
 					s.setRotation(
 							-playerModel.body.pitch - s.getBone().baseRotX(),
 							-playerModel.body.yaw - s.getBone().baseRotY(),

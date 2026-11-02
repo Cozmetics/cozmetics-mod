@@ -3,8 +3,6 @@ package io.github.itsarcn.cozmetics.client.pack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.itsarcn.cozmetics.Cozmetics;
-import io.github.itsarcn.cozmetics.bbmodel.BbModel;
-import io.github.itsarcn.cozmetics.bbmodel.BbModelManager;
 import io.github.itsarcn.cozmetics.client.render.dynamic.GeckoLibDynamicBakeHelper;
 import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
@@ -30,7 +28,7 @@ import java.util.zip.ZipFile;
 /**
  * Safely extracts, adapts, and registers cosmetic ZIP packages at runtime.
  *
- * Supports both Blockbench (.bbmodel) projects and Bedrock (.geo.json / .animation.json) models.
+ * Supports Bedrock (.geo.json / .animation.json) models.
  * Feeds the dynamic rendering, texture decoding, and GeckoLib animation pipelines.
  */
 public final class CosmeticPackageLoader {
@@ -138,22 +136,7 @@ public final class CosmeticPackageLoader {
 
 		// Load and adapt model
 		String modelFileName = modelFile.getFileName().toString().toLowerCase();
-		if (modelFileName.endsWith(".bbmodel")) {
-			try (InputStream in = Files.newInputStream(modelFile)) {
-				BbModel bbModel = BbModelManager.getInstance().load(id, in).orElseThrow(
-						() -> new IOException("Failed to parse .bbmodel for " + id)
-				);
-
-				JsonObject geoJson = BbModelManager.getInstance().getGeometryJson(id);
-				JsonObject animJson = BbModelManager.getInstance().getAnimationJson(id);
-				if (geoJson != null) {
-					GeckoLibDynamicBakeHelper.bakeModel(id, geoJson);
-				}
-				if (animJson != null) {
-					GeckoLibDynamicBakeHelper.bakeAnimations(id, animJson);
-				}
-			}
-		} else if (modelFileName.endsWith(".json")) {
+		if (modelFileName.endsWith(".json")) {
 			// Bedrock geometry JSON
 			JsonObject geoJson = JsonParser.parseString(Files.readString(modelFile, StandardCharsets.UTF_8)).getAsJsonObject();
 			GeckoLibDynamicBakeHelper.bakeModel(id, geoJson);

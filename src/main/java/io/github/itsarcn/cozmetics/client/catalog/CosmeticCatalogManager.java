@@ -79,6 +79,10 @@ public class CosmeticCatalogManager {
 		items.add(item);
 	}
 
+	public void clearItems() {
+		items.clear();
+	}
+
 	/**
 	 * Returns items matching the specified category filter and search query.
 	 */
@@ -110,6 +114,19 @@ public class CosmeticCatalogManager {
 	 * Loads cached catalogue metadata from local disk for offline resilience.
 	 */
 	public synchronized void loadCachedCatalogue() {
+		if (io.github.itsarcn.cozmetics.network.HttpCosmeticsClient.USE_LOCALHOST) {
+			Cozmetics.LOGGER.info("Localhost mode active: invalidating stale cached catalogue to force fresh sync from local backend.");
+			items.clear();
+			try {
+				Path metaFile = cacheManager.getMetadataFile();
+				if (Files.exists(metaFile)) {
+					Files.deleteIfExists(metaFile);
+				}
+			} catch (Exception ignored) {
+			}
+			return;
+		}
+
 		Path metaFile = cacheManager.getMetadataFile();
 		if (!Files.exists(metaFile)) {
 			return;
