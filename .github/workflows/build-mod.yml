@@ -3,11 +3,66 @@ name: Build Mod (Manual)
 on:
   workflow_dispatch:
     inputs:
-      versions:
-        description: "Minecraft Version(s) to build (e.g. '1.21.11', '1.21.10, 1.21.11', or 'all')"
-        required: true
-        default: "1.21.11"
-        type: string
+      v_1_21_11:
+        description: "Minecraft 1.21.11"
+        type: boolean
+        default: true
+      v_1_21_10:
+        description: "Minecraft 1.21.10"
+        type: boolean
+        default: false
+      v_1_21_8:
+        description: "Minecraft 1.21.8"
+        type: boolean
+        default: false
+      v_1_21_7:
+        description: "Minecraft 1.21.7"
+        type: boolean
+        default: false
+      v_1_21_6:
+        description: "Minecraft 1.21.6"
+        type: boolean
+        default: false
+      v_1_21_5:
+        description: "Minecraft 1.21.5"
+        type: boolean
+        default: false
+      v_1_21_4:
+        description: "Minecraft 1.21.4"
+        type: boolean
+        default: false
+      v_1_21_3:
+        description: "Minecraft 1.21.3"
+        type: boolean
+        default: false
+      v_1_21_1:
+        description: "Minecraft 1.21.1"
+        type: boolean
+        default: false
+      v_1_21:
+        description: "Minecraft 1.21"
+        type: boolean
+        default: false
+      v_26_3:
+        description: "Minecraft 26.3"
+        type: boolean
+        default: false
+      v_26_2:
+        description: "Minecraft 26.2"
+        type: boolean
+        default: false
+      v_26_1_2:
+        description: "Minecraft 26.1.2"
+        type: boolean
+        default: false
+      v_26_1:
+        description: "Minecraft 26.1"
+        type: boolean
+        default: false
+      all_versions:
+        description: "Build ALL versions"
+        type: boolean
+        default: false
       publish_release:
         description: "Publish/attach JARs to GitHub Release"
         required: false
@@ -48,20 +103,32 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Target Version(s)
-        env:
-          INPUT_VERSIONS: ${{ inputs.versions }}
         run: |
           set -euo pipefail
 
-          # Normalize input: replace commas with spaces
-          normalized="${INPUT_VERSIONS//,/ }"
-          # Trim leading/trailing whitespace
-          normalized="$(echo "$normalized" | xargs)"
-
-          if [ "$normalized" = "all" ]; then
+          VERSIONS=()
+          if [ "${{ inputs.all_versions }}" = "true" ]; then
             VERSIONS=("1.21.11" "1.21.10" "1.21.8" "1.21.7" "1.21.6" "1.21.5" "1.21.4" "1.21.3" "1.21.1" "1.21" "26.3" "26.2" "26.1.2" "26.1")
           else
-            read -r -a VERSIONS <<< "$normalized"
+            [ "${{ inputs.v_1_21_11 }}" = "true" ] && VERSIONS+=("1.21.11")
+            [ "${{ inputs.v_1_21_10 }}" = "true" ] && VERSIONS+=("1.21.10")
+            [ "${{ inputs.v_1_21_8 }}" = "true" ] && VERSIONS+=("1.21.8")
+            [ "${{ inputs.v_1_21_7 }}" = "true" ] && VERSIONS+=("1.21.7")
+            [ "${{ inputs.v_1_21_6 }}" = "true" ] && VERSIONS+=("1.21.6")
+            [ "${{ inputs.v_1_21_5 }}" = "true" ] && VERSIONS+=("1.21.5")
+            [ "${{ inputs.v_1_21_4 }}" = "true" ] && VERSIONS+=("1.21.4")
+            [ "${{ inputs.v_1_21_3 }}" = "true" ] && VERSIONS+=("1.21.3")
+            [ "${{ inputs.v_1_21_1 }}" = "true" ] && VERSIONS+=("1.21.1")
+            [ "${{ inputs.v_1_21 }}" = "true" ] && VERSIONS+=("1.21")
+            [ "${{ inputs.v_26_3 }}" = "true" ] && VERSIONS+=("26.3")
+            [ "${{ inputs.v_26_2 }}" = "true" ] && VERSIONS+=("26.2")
+            [ "${{ inputs.v_26_1_2 }}" = "true" ] && VERSIONS+=("26.1.2")
+            [ "${{ inputs.v_26_1 }}" = "true" ] && VERSIONS+=("26.1")
+          fi
+
+          if [ "${#VERSIONS[@]}" -eq 0 ]; then
+            echo "No version selected, defaulting to 1.21.11"
+            VERSIONS=("1.21.11")
           fi
 
           echo "Target versions count: ${#VERSIONS[@]}"
@@ -73,7 +140,7 @@ jobs:
               echo ">>> Successfully built $ver"
             else
               echo "::warning::Build for $ver failed"
-              if [ "$normalized" != "all" ] && [ "${#VERSIONS[@]}" -eq 1 ]; then
+              if [ "${{ inputs.all_versions }}" != "true" ] && [ "${#VERSIONS[@]}" -eq 1 ]; then
                 exit 1
               fi
             fi
