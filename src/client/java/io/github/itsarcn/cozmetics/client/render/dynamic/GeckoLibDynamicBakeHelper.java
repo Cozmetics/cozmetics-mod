@@ -3,12 +3,14 @@ package io.github.itsarcn.cozmetics.client.render.dynamic;
 import com.google.gson.JsonObject;
 import io.github.itsarcn.cozmetics.Cozmetics;
 import net.minecraft.util.Identifier;
+//? if =1.21.11 {
 import software.bernie.geckolib.cache.GeckoLibResources;
 import software.bernie.geckolib.cache.model.BakedGeoModel;
 import software.bernie.geckolib.loading.json.raw.Model;
 import software.bernie.geckolib.loading.object.BakedAnimations;
 import software.bernie.geckolib.loading.object.BakedModelFactory;
 import software.bernie.geckolib.loading.object.GeometryTree;
+//?}
 
 /**
  * Utility helper to dynamically bake in-memory geometry and animations
@@ -19,6 +21,7 @@ public final class GeckoLibDynamicBakeHelper {
 	private GeckoLibDynamicBakeHelper() {}
 
 	public static void bakeModel(Identifier modelId, JsonObject geometryJson) {
+		//? if =1.21.11 {
 		try {
 			if (GeckoLibResources.getBakedModels() == null || GeckoLibResources.getBakedModels().cache() == null) {
 				return;
@@ -30,9 +33,11 @@ public final class GeckoLibDynamicBakeHelper {
 		} catch (Throwable t) {
 			Cozmetics.LOGGER.warn("Could not bake dynamic GeckoLib model '{}': {}", modelId, t.getMessage());
 		}
+		//?}
 	}
 
 	public static void bakeAnimations(Identifier animId, JsonObject animationJson) {
+		//? if =1.21.11 {
 		try {
 			if (GeckoLibResources.getBakedAnimations() == null || GeckoLibResources.getBakedAnimations().cache() == null) {
 				return;
@@ -44,5 +49,6 @@ public final class GeckoLibDynamicBakeHelper {
 		} catch (Throwable t) {
 			Cozmetics.LOGGER.warn("Could not bake dynamic GeckoLib animations '{}': {}", animId, t.getMessage());
 		}
+		//?}
 	}
 }

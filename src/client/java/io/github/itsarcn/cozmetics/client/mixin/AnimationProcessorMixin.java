@@ -1,5 +1,6 @@
 package io.github.itsarcn.cozmetics.client.mixin;
 
+//? if =1.21.11 {
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
@@ -62,4 +63,5 @@ public class AnimationProcessorMixin {
 		}
 	}
 }
+//?}
 

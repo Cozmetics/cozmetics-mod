@@ -15,7 +15,12 @@ import net.minecraft.util.Identifier;
 import org.jspecify.annotations.Nullable;
 import software.bernie.geckolib.renderer.GeoObjectRenderer;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
+//? if =1.21.11 {
 import software.bernie.geckolib.renderer.base.RenderPassInfo;
+//?} else if <=1.21.10 && >=1.21.5 {
+/*import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.renderer.base.RenderModelPositioner;*/
+//?}
 
 /**
  * Reusable GeoObjectRenderer for rendering cosmetics attached to player entities.
@@ -57,9 +62,14 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 	@Override
 	public @Nullable RenderLayer getRenderType(GeoRenderState renderState, Identifier texture) {
 		// Disable backface culling so flat 2D quads (e.g. scythe blades, wings, thin geometries) are visible from both sides
+		//? if >=1.21.11 {
 		return RenderLayers.entityCutoutNoCull(texture);
+		//?} else {
+		/*return RenderLayer.getEntityCutoutNoCull(texture);*/
+		//?}
 	}
 
+	//? if =1.21.11 {
 	@Override
 	public void adjustRenderPose(RenderPassInfo<GeoRenderState> renderPassInfo) {
 		AttachmentTransform transform = this.cosmetic.getTransform();
@@ -90,6 +100,30 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		// Invert Y and X to match Bedrock coordinates
 		poseStack.scale(-1.0F, -1.0F, 1.0F);
 	}
+	//?} else if <=1.21.10 && >=1.21.5 {
+	/*@Override
+	public void adjustRenderPose(GeoRenderState renderState, MatrixStack poseStack, BakedGeoModel model, CameraRenderState cameraState) {
+		AttachmentTransform transform = this.cosmetic.getTransform();
+		boolean isIsolated = Boolean.TRUE.equals(renderState.getGeckolibData(IS_ISOLATED));
+
+		if (isIsolated) {
+			io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds bounds =
+					io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(this.cosmetic);
+			float tx = bounds.centerX();
+			float ty = 1.501F + bounds.centerY();
+			float tz = -bounds.centerZ();
+
+			poseStack.translate(tx, ty, tz);
+		} else {
+			poseStack.translate(0.0F, 1.5F, 0.0F);
+		}
+
+		if (transform.scale() != 1.0F) {
+			poseStack.scale(transform.scale(), transform.scale(), transform.scale());
+		}
+
+		poseStack.scale(-1.0F, -1.0F, 1.0F);
+	}*///?}
 
 	public void renderCosmetic(
 			MatrixStack matrices,
@@ -104,6 +138,7 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 
 		boolean isIsolated = playerState instanceof io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
 
+		//? if =1.21.11 {
 		RenderPassInfo.BoneUpdater<GeoRenderState> boneUpdater = (passInfo, snapshots) -> {
 			// 1. Head (crowns, face masks)
 			snapshots.ifPresent("anchor_head", s -> {
@@ -222,5 +257,94 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		};
 
 		performRenderPass(this.animatable, playerState, matrices, queue, camera, effectiveLight, 0, boneUpdater);
+		//?} else if <=1.21.10 && >=1.21.5 {
+		/*RenderModelPositioner<GeoRenderState> positioner = RenderModelPositioner.add(null, (renderState, bakedModel) -> {
+			bakedModel.getBone("anchor_head").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else {
+					b.setRotX(-playerModel.head.pitch);
+					b.setRotY(-playerModel.head.yaw);
+					b.setRotZ(playerModel.head.roll);
+					b.setPosX(playerModel.head.originX);
+					b.setPosY(playerModel.head.originY - customOffsetY);
+					b.setPosZ(playerModel.head.originZ);
+				}
+			});
+			bakedModel.getBone("anchor_body").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET && this.cosmetic.getCategory() != CosmeticCategory.PET) {
+					b.setRotX(-playerModel.body.pitch);
+					b.setRotY(-playerModel.body.yaw);
+					b.setRotZ(playerModel.body.roll);
+					b.setPosX(playerModel.body.originX);
+					b.setPosY(playerModel.body.originY - customOffsetY);
+					b.setPosZ(playerModel.body.originZ);
+				} else {
+					if (playerModel.body.originY != 0.0F || playerModel.body.originZ != 0.0F) {
+						b.setPosX(0);
+						b.setPosY(playerModel.body.originY - customOffsetY);
+						b.setPosZ(playerModel.body.originZ);
+					}
+				}
+			});
+			bakedModel.getBone("anchor_leftarm").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else {
+					b.setRotX(-playerModel.leftArm.pitch);
+					b.setRotY(-playerModel.leftArm.yaw);
+					b.setRotZ(playerModel.leftArm.roll);
+					b.setPosX(playerModel.leftArm.originX - 5.0F);
+					b.setPosY(playerModel.leftArm.originY - 2.0F);
+					b.setPosZ(playerModel.leftArm.originZ);
+				}
+			});
+			bakedModel.getBone("anchor_rightarm").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else {
+					b.setRotX(-playerModel.rightArm.pitch);
+					b.setRotY(-playerModel.rightArm.yaw);
+					b.setRotZ(playerModel.rightArm.roll);
+					b.setPosX(playerModel.rightArm.originX + 5.0F);
+					b.setPosY(playerModel.rightArm.originY - 2.0F);
+					b.setPosZ(playerModel.rightArm.originZ);
+				}
+			});
+			bakedModel.getBone("anchor_leftleg").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else {
+					b.setRotX(-playerModel.leftLeg.pitch);
+					b.setRotY(-playerModel.leftLeg.yaw);
+					b.setRotZ(playerModel.leftLeg.roll);
+					b.setPosX(playerModel.leftLeg.originX - 1.9F);
+					b.setPosY(playerModel.leftLeg.originY - 12.0F);
+					b.setPosZ(playerModel.leftLeg.originZ);
+				}
+			});
+			bakedModel.getBone("anchor_rightleg").ifPresent(b -> {
+				if (isIsolated) {
+					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
+					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
+				} else {
+					b.setRotX(-playerModel.rightLeg.pitch);
+					b.setRotY(-playerModel.rightLeg.yaw);
+					b.setRotZ(playerModel.rightLeg.roll);
+					b.setPosX(playerModel.rightLeg.originX + 1.9F);
+					b.setPosY(playerModel.rightLeg.originY - 12.0F);
+					b.setPosZ(playerModel.rightLeg.originZ);
+				}
+			});
+		});
+		submit(matrices, this.animatable, playerState, queue, camera, effectiveLight, 0, positioner);
+		*///?}
 	}
 }

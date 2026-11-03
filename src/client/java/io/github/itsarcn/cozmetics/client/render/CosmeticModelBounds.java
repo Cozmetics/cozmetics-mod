@@ -2,6 +2,7 @@ package io.github.itsarcn.cozmetics.client.render;
 
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import net.minecraft.util.Identifier;
+//? if =1.21.11 {
 import software.bernie.geckolib.cache.GeckoLibResources;
 import software.bernie.geckolib.cache.model.BakedGeoModel;
 import software.bernie.geckolib.cache.model.GeoBone;
@@ -9,6 +10,7 @@ import software.bernie.geckolib.cache.model.GeoQuad;
 import software.bernie.geckolib.cache.model.GeoVertex;
 import software.bernie.geckolib.cache.model.cuboid.CuboidGeoBone;
 import software.bernie.geckolib.cache.model.cuboid.GeoCube;
+//?}
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,6 +49,7 @@ public record CosmeticModelBounds(
 	}
 
 	private static CosmeticModelBounds compute(Cosmetic cosmetic) {
+		//? if =1.21.11 {
 		try {
 			if (GeckoLibResources.getBakedModels() != null) {
 				BakedGeoModel bakedModel = GeckoLibResources.getBakedModels().getModel(cosmetic.getModelPath());
@@ -60,11 +63,13 @@ public record CosmeticModelBounds(
 		} catch (Throwable ignored) {
 			// Model might not be baked yet or running in unit test environment
 		}
+		//?}
 
 		// Fallback based on attachment slot
 		return defaultForSlot(cosmetic);
 	}
 
+	//? if =1.21.11 {
 	public static CosmeticModelBounds fromBakedModel(BakedGeoModel model) {
 		float minX = Float.POSITIVE_INFINITY;
 		float maxX = Float.NEGATIVE_INFINITY;
@@ -144,6 +149,7 @@ public record CosmeticModelBounds(
 
 		return hasVertices ? new float[]{minX, maxX, minY, maxY, minZ, maxZ} : null;
 	}
+	//?}
 
 	private static CosmeticModelBounds defaultForSlot(Cosmetic cosmetic) {
 		float cY = switch (cosmetic.getAttachmentSlot()) {

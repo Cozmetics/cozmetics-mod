@@ -4,7 +4,11 @@ import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.manager.AnimatableManager;
+//? if <=1.21.10 && >=1.21.5 {
+/*import software.bernie.geckolib.animatable.processing.AnimationController;*/
+//?} else {
 import software.bernie.geckolib.animation.AnimationController;
+//?}
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
@@ -36,5 +40,11 @@ public class DynamicCosmeticAnimatable implements GeoAnimatable {
 	public AnimatableInstanceCache getAnimatableInstanceCache() {
 		return this.cache;
 	}
+
+	//? if <1.21.11 {
+	/*@Override
+	public double getTick(@org.jspecify.annotations.Nullable Object object) {
+		return (System.currentTimeMillis() % 100000000L) / 50.0;
+	}*///?}
 }
 
