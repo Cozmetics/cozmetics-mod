@@ -7,7 +7,7 @@ plugins {
 base {
 	archivesName = "cozmetics"
 }
-version = "${project.version}+${sc.current.version}"
+version = "${sc.current.version}+${project.version}"
 
 repositories {
 	mavenCentral()

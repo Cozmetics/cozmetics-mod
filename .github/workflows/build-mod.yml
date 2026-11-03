@@ -3,27 +3,11 @@ name: Build Mod (Manual)
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Minecraft Version to Build"
+      versions:
+        description: "Minecraft Version(s) to build (e.g. '1.21.11', '1.21.10, 1.21.11', or 'all')"
         required: true
         default: "1.21.11"
-        type: choice
-        options:
-          - "1.21.11"
-          - "1.21.10"
-          - "1.21.8"
-          - "1.21.7"
-          - "1.21.6"
-          - "1.21.5"
-          - "1.21.4"
-          - "1.21.3"
-          - "1.21.1"
-          - "1.21"
-          - "26.3"
-          - "26.2"
-          - "26.1.2"
-          - "26.1"
-          - "all"
+        type: string
       publish_release:
         description: "Publish/attach JARs to GitHub Release"
         required: false
@@ -65,16 +49,22 @@ jobs:
 
       - name: Build Target Version(s)
         env:
-          TARGET: ${{ inputs.version }}
+          INPUT_VERSIONS: ${{ inputs.versions }}
         run: |
           set -euo pipefail
 
-          if [ "$TARGET" = "all" ]; then
+          # Normalize input: replace commas with spaces
+          normalized="${INPUT_VERSIONS//,/ }"
+          # Trim leading/trailing whitespace
+          normalized="$(echo "$normalized" | xargs)"
+
+          if [ "$normalized" = "all" ]; then
             VERSIONS=("1.21.11" "1.21.10" "1.21.8" "1.21.7" "1.21.6" "1.21.5" "1.21.4" "1.21.3" "1.21.1" "1.21" "26.3" "26.2" "26.1.2" "26.1")
           else
-            VERSIONS=("$TARGET")
+            read -r -a VERSIONS <<< "$normalized"
           fi
 
+          echo "Target versions count: ${#VERSIONS[@]}"
           echo "Building versions: ${VERSIONS[*]}"
 
           for ver in "${VERSIONS[@]}"; do
@@ -83,7 +73,7 @@ jobs:
               echo ">>> Successfully built $ver"
             else
               echo "::warning::Build for $ver failed"
-              if [ "$TARGET" != "all" ]; then
+              if [ "$normalized" != "all" ] && [ "${#VERSIONS[@]}" -eq 1 ]; then
                 exit 1
               fi
             fi
@@ -144,4 +134,3 @@ jobs:
               --title "$TITLE" \
               --notes "Automated multi-version release build for Cozmetics."
           fi
-
