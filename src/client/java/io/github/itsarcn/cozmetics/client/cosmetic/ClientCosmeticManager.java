@@ -171,6 +171,20 @@ public class ClientCosmeticManager {
 		return list;
 	}
 
+	public synchronized boolean isCosmeticEquipped(Identifier id) {
+		for (Cosmetic c : this.equippedCosmetics.values()) {
+			if (c != null && c.getId().equals(id)) return true;
+		}
+		return false;
+	}
+
+	public synchronized void equip(Identifier id, CosmeticCategory category) {
+		Cosmetic c = CosmeticRegistry.get(id).orElse(null);
+		if (c != null) {
+			equip(c);
+		}
+	}
+
 	public synchronized void equip(Cosmetic cosmetic) {
 		if (cosmetic != null && cosmetic.getCategory().isEnabled()) {
 			this.equippedCosmetics.put(cosmetic.getCategory(), cosmetic);

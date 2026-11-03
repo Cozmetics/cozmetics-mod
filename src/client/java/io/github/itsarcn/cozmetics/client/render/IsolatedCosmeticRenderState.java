@@ -1,5 +1,6 @@
 package io.github.itsarcn.cozmetics.client.render;
 
+//? if >1.21.4 {
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
@@ -79,4 +80,5 @@ public class IsolatedCosmeticRenderState extends PlayerEntityRenderState {
 		return new org.joml.Vector3f(0.0F, 0.0F, 0.0F);
 	}
 }
+//?}
 

@@ -6,20 +6,28 @@ import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import org.jspecify.annotations.Nullable;
 import software.bernie.geckolib.renderer.GeoObjectRenderer;
+
+//? if >1.21.4 {
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.render.state.CameraRenderState;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
+//?}
+
 //? if =1.21.11 {
 import software.bernie.geckolib.renderer.base.RenderPassInfo;
 //?} else if <=1.21.10 && >=1.21.5 {
 /*import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.base.RenderModelPositioner;*/
+//?} else if <=1.21.4 {
+/*import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.VertexConsumerProvider;
+import software.bernie.geckolib.cache.object.BakedGeoModel;*/
 //?}
 
 /**
@@ -27,6 +35,110 @@ import software.bernie.geckolib.renderer.base.RenderModelPositioner;*/
  * Synchronizes model anchor bones with player limbs (head, body, arms, legs),
  * crouch/sneak translations, and custom attachment transforms.
  */
+//? if <=1.21.4 {
+/*public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAnimatable> {
+	private final Cosmetic cosmetic;
+	private final DynamicCosmeticAnimatable animatable;
+
+	public DynamicCosmeticRenderer(Cosmetic cosmetic) {
+		super(new DynamicCosmeticModel(cosmetic));
+		this.cosmetic = cosmetic;
+		this.animatable = new DynamicCosmeticAnimatable(cosmetic);
+	}
+
+	public void renderCosmetic(
+			MatrixStack matrices,
+			VertexConsumerProvider vertexConsumers,
+			@Nullable Object camera,
+			int light,
+			@Nullable AbstractClientPlayerEntity player,
+			@Nullable PlayerEntityModel<?> playerModel
+	) {
+		int effectiveLight = this.cosmetic.getTransform().staticLighting() ? 0x00F000F0 : light;
+		float customOffsetY = this.cosmetic.getTransform().translateY();
+		BakedGeoModel bakedModel = getGeoModel().getBakedModel(getGeoModel().getModelResource(this.animatable));
+
+		if (bakedModel != null && playerModel != null) {
+			bakedModel.getBone("anchor_head").ifPresent(b -> {
+				b.setRotX(-playerModel.head.pitch);
+				b.setRotY(-playerModel.head.yaw);
+				b.setRotZ(playerModel.head.roll);
+				b.setPosX(playerModel.head.pivotX);
+				b.setPosY(playerModel.head.pivotY - customOffsetY);
+				b.setPosZ(playerModel.head.pivotZ);
+			});
+			bakedModel.getBone("anchor_body").ifPresent(b -> {
+				if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET && this.cosmetic.getCategory() != CosmeticCategory.PET) {
+					b.setRotX(-playerModel.body.pitch);
+					b.setRotY(-playerModel.body.yaw);
+					b.setRotZ(playerModel.body.roll);
+					b.setPosX(playerModel.body.pivotX);
+					b.setPosY(playerModel.body.pivotY - customOffsetY);
+					b.setPosZ(playerModel.body.pivotZ);
+				} else if (playerModel.body.pivotY != 0.0F || playerModel.body.pivotZ != 0.0F) {
+					b.setPosX(0);
+					b.setPosY(playerModel.body.pivotY - customOffsetY);
+					b.setPosZ(playerModel.body.pivotZ);
+				}
+			});
+			bakedModel.getBone("anchor_leftarm").ifPresent(b -> {
+				b.setRotX(-playerModel.leftArm.pitch);
+				b.setRotY(-playerModel.leftArm.yaw);
+				b.setRotZ(playerModel.leftArm.roll);
+				b.setPosX(playerModel.leftArm.pivotX - 5.0F);
+				b.setPosY(playerModel.leftArm.pivotY - 2.0F);
+				b.setPosZ(playerModel.leftArm.pivotZ);
+			});
+			bakedModel.getBone("anchor_rightarm").ifPresent(b -> {
+				b.setRotX(-playerModel.rightArm.pitch);
+				b.setRotY(-playerModel.rightArm.yaw);
+				b.setRotZ(playerModel.rightArm.roll);
+				b.setPosX(playerModel.rightArm.pivotX + 5.0F);
+				b.setPosY(playerModel.rightArm.pivotY - 2.0F);
+				b.setPosZ(playerModel.rightArm.pivotZ);
+			});
+			bakedModel.getBone("anchor_leftleg").ifPresent(b -> {
+				b.setRotX(-playerModel.leftLeg.pitch);
+				b.setRotY(-playerModel.leftLeg.yaw);
+				b.setRotZ(playerModel.leftLeg.roll);
+				b.setPosX(playerModel.leftLeg.pivotX - 1.9F);
+				b.setPosY(playerModel.leftLeg.pivotY - 12.0F);
+				b.setPosZ(playerModel.leftLeg.pivotZ);
+			});
+			bakedModel.getBone("anchor_rightleg").ifPresent(b -> {
+				b.setRotX(-playerModel.rightLeg.pitch);
+				b.setRotY(-playerModel.rightLeg.yaw);
+				b.setRotZ(playerModel.rightLeg.roll);
+				b.setPosX(playerModel.rightLeg.pivotX + 1.9F);
+				b.setPosY(playerModel.rightLeg.pivotY - 12.0F);
+				b.setPosZ(playerModel.rightLeg.pivotZ);
+			});
+		}
+
+		matrices.push();
+		if (player == null) {
+			io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds bounds =
+					io.github.itsarcn.cozmetics.client.render.CosmeticModelBounds.get(this.cosmetic);
+			float tx = bounds.centerX();
+			float ty = 1.501F + bounds.centerY();
+			float tz = -bounds.centerZ();
+			matrices.translate(tx, ty, tz);
+		} else {
+			matrices.translate(0.0F, 1.5F, 0.0F);
+		}
+
+		if (this.cosmetic.getTransform().scale() != 1.0F) {
+			float s = this.cosmetic.getTransform().scale();
+			matrices.scale(s, s, s);
+		}
+		matrices.scale(-1.0F, -1.0F, 1.0F);
+
+		RenderLayer renderType = RenderLayer.getEntityCutoutNoCull(this.cosmetic.getTexturePath());
+		render(matrices, this.animatable, vertexConsumers, renderType, null, effectiveLight, 0);
+		matrices.pop();
+	}
+}
+*///?} else {
 public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAnimatable, PlayerEntityRenderState, GeoRenderState> {
 	private final Cosmetic cosmetic;
 	private final DynamicCosmeticAnimatable animatable;
@@ -273,10 +385,7 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 				}
 			});
 			bakedModel.getBone("anchor_body").ifPresent(b -> {
-				if (isIsolated) {
-					b.setRotX(0); b.setRotY(0); b.setRotZ(0);
-					b.setPosX(0); b.setPosY(0); b.setPosZ(0);
-				} else if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET && this.cosmetic.getCategory() != CosmeticCategory.PET) {
+				if (this.cosmetic.getAttachmentSlot() != AttachmentSlot.PET && this.cosmetic.getCategory() != CosmeticCategory.PET) {
 					b.setRotX(-playerModel.body.pitch);
 					b.setRotY(-playerModel.body.yaw);
 					b.setRotZ(playerModel.body.roll);
@@ -348,3 +457,4 @@ public class DynamicCosmeticRenderer extends GeoObjectRenderer<DynamicCosmeticAn
 		*///?}
 	}
 }
+//?}

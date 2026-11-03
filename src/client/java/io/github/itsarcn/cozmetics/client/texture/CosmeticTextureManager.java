@@ -66,7 +66,11 @@ public final class CosmeticTextureManager implements AutoCloseable {
 				this.frameIds.add(frameId);
 
 				NativeImage frameImage = frame.image();
+				//? if <=1.21.4 {
+				/*NativeImageBackedTexture texture = new NativeImageBackedTexture(frameImage);*/
+				//?} else {
 				NativeImageBackedTexture texture = new NativeImageBackedTexture(() -> "Cozmetics_" + frameId, frameImage);
+				//?}
 				this.gpuTextures.add(texture);
 
 				// Register in Minecraft TextureManager on main thread if available

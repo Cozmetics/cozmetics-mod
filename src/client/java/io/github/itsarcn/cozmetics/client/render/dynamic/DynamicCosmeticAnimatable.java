@@ -3,7 +3,11 @@ package io.github.itsarcn.cozmetics.client.render.dynamic;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+//? if <=1.21.4 {
+/*import software.bernie.geckolib.animation.AnimatableManager;*/
+//?} else {
 import software.bernie.geckolib.animatable.manager.AnimatableManager;
+//?}
 //? if <=1.21.10 && >=1.21.5 {
 /*import software.bernie.geckolib.animatable.processing.AnimationController;*/
 //?} else {
@@ -32,7 +36,11 @@ public class DynamicCosmeticAnimatable implements GeoAnimatable {
 	public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
 		if (this.cosmetic.isAnimated() && this.cosmetic.getIdleAnimationName() != null) {
 			RawAnimation idleAnim = RawAnimation.begin().thenLoop(this.cosmetic.getIdleAnimationName());
+			//? if <=1.21.4 {
+			/*controllers.add(new AnimationController<DynamicCosmeticAnimatable>(this, "main", 0, state -> state.setAndContinue(idleAnim)));*/
+			//?} else {
 			controllers.add(new AnimationController<DynamicCosmeticAnimatable>("main", 0, state -> state.setAndContinue(idleAnim)));
+			//?}
 		}
 	}
 

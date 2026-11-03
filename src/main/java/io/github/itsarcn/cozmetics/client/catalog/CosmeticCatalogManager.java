@@ -59,6 +59,18 @@ public class CosmeticCatalogManager {
 		return Collections.unmodifiableList(items);
 	}
 
+	public List<CatalogItem> getCachedItems() {
+		return getAllItems();
+	}
+
+	public List<CatalogItem> filter(@Nullable CosmeticCategory category, String searchQuery) {
+		String q = searchQuery == null ? "" : searchQuery.trim().toLowerCase();
+		return this.items.stream()
+				.filter(i -> category == null || i.category() == category)
+				.filter(i -> q.isEmpty() || i.name().toLowerCase().contains(q) || i.author().toLowerCase().contains(q))
+				.toList();
+	}
+
 	public Optional<CatalogItem> getItem(Identifier id) {
 		return items.stream().filter(it -> it.id().equals(id)).findFirst();
 	}

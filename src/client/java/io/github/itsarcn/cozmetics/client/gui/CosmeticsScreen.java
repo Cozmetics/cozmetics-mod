@@ -4,22 +4,24 @@ import io.github.itsarcn.cozmetics.catalog.CatalogItem;
 import io.github.itsarcn.cozmetics.client.catalog.CosmeticCatalogManager;
 import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
 import io.github.itsarcn.cozmetics.client.download.CosmeticAssetDownloader;
-import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
 import io.github.itsarcn.cozmetics.client.texture.CosmeticTextureManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import net.minecraft.client.MinecraftClient;
+//? if >=1.21.10 {
+import io.github.itsarcn.cozmetics.client.render.IsolatedCosmeticRenderState;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.entity.player.SkinTextures;
-import net.minecraft.text.Text;
 import net.minecraft.util.Arm;
+//?}
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.AlwaysSelectedEntryListWidget;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jspecify.annotations.Nullable;
 import org.joml.Quaternionf;
@@ -48,49 +50,62 @@ public class CosmeticsScreen extends Screen {
 	private double lastMouseX = 0;
 	private double lastMouseY = 0;
 
+	// Bounding coordinates of character preview box
 	private int previewLeft;
-	private int previewTop;
 	private int previewRight;
+	private int previewTop;
 	private int previewBottom;
 
 	public CosmeticsScreen(@Nullable Screen parent) {
-		super(Text.literal("Cozmetics Wardrobe"));
+		super(Text.literal("Cozmetics"));
 		this.parent = parent;
 	}
 
-	public static void open(@Nullable Screen parent) {
-		MinecraftClient.getInstance().setScreen(new CosmeticsScreen(parent));
+	private static void drawStroke(DrawContext context, int x, int y, int w, int h, int color) {
+		context.fill(x, y, x + w, y + 1, color);
+		context.fill(x, y + h - 1, x + w, y + h, color);
+		context.fill(x, y + 1, x + 1, y + h - 1, color);
+		context.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
 	}
 
 	@Override
 	protected void init() {
-		// Wider, more readable side menu (220-240px)
-		int rightPanelWidth = Math.min(235, Math.max(215, (int) (this.width * 0.38f)));
-		this.previewLeft = 14;
-		this.previewTop = 32;
-		this.previewRight = this.width - rightPanelWidth - 14;
-		this.previewBottom = this.height - 14;
+		super.init();
 
-		int rightPanelX = this.previewRight + 10;
+		// Responsive layout: 3D Preview takes ~60% of width on left, list & controls take ~40% on right
+		int margin = 10;
+		int headerHeight = 36;
+		int footerHeight = 36;
 
-		// 1. Quick Action Header Buttons: [ Show All ] and [ Hide All ]
-		int topButtonWidth = (rightPanelWidth - 4) / 2;
+		int previewAreaWidth = (int) (this.width * 0.58f) - (margin * 2);
+		int rightPanelX = margin + previewAreaWidth + margin;
+		int rightPanelWidth = this.width - rightPanelX - margin;
+
+		this.previewLeft = margin;
+		this.previewTop = headerHeight;
+		this.previewRight = margin + previewAreaWidth;
+		this.previewBottom = this.height - margin;
+
+		// 1. Top Action Bar above the equipped cosmetics list: [ Show All ] and [ Hide All ]
+		int controlButtonY = headerHeight;
+		int controlButtonW = (rightPanelWidth - 6) / 2;
+
 		ButtonWidget showAllBtn = ButtonWidget.builder(Text.literal("Show All"), btn -> showAll())
-				.dimensions(rightPanelX, 32, topButtonWidth, 20)
+				.dimensions(rightPanelX, controlButtonY, controlButtonW, 18)
 				.build();
 		addDrawableChild(showAllBtn);
 
 		ButtonWidget hideAllBtn = ButtonWidget.builder(Text.literal("Hide All"), btn -> hideAll())
-				.dimensions(rightPanelX + topButtonWidth + 4, 32, topButtonWidth, 20)
+				.dimensions(rightPanelX + controlButtonW + 6, controlButtonY, controlButtonW, 18)
 				.build();
 		addDrawableChild(hideAllBtn);
 
-		// 2. Equipped Cosmetics List Widget - maximized vertical space
-		int listTop = 56;
+		// 2. Equipped Cosmetics List Widget
+		int listTop = controlButtonY + 22;
 		int doneButtonHeight = 20;
-		int doneButtonY = this.height - 14 - doneButtonHeight;
-		int catalogButtonY = doneButtonY - 24;
-		int listHeight = Math.max(60, catalogButtonY - listTop - 4);
+		int catalogButtonY = this.height - margin - doneButtonHeight - 24;
+		int doneButtonY = this.height - margin - doneButtonHeight;
+		int listHeight = catalogButtonY - listTop - 6;
 
 		this.listWidget = new EquippedCosmeticListWidget(
 				this.client,
@@ -160,7 +175,7 @@ public class CosmeticsScreen extends Screen {
 
 		// Preview background container
 		context.fill(this.previewLeft, this.previewTop, this.previewRight, this.previewBottom, 0x55000000);
-		context.drawStrokedRectangle(this.previewLeft, this.previewTop, previewWidth, previewHeight, 0x44AAAAAA);
+		drawStroke(context, this.previewLeft, this.previewTop, previewWidth, previewHeight, 0x44AAAAAA);
 
 		// Preview badges & hints (solid alpha 0xFF)
 		context.drawTextWithShadow(
@@ -195,6 +210,7 @@ public class CosmeticsScreen extends Screen {
 		}
 	}
 
+	//? if >=1.21.10 {
 	private void renderPlayerPreview(DrawContext context, float delta) {
 		PlayerEntityRenderState state = getOrCreateRenderState(delta);
 		if (state == null) {
@@ -317,6 +333,67 @@ public class CosmeticsScreen extends Screen {
 		}
 		return super.mouseDragged(click, deltaX, deltaY);
 	}
+	//?} else {
+	/*
+	private void renderPlayerPreview(DrawContext context, float delta) {
+		if (this.client == null || this.client.player == null) {
+			return;
+		}
+
+		int previewWidth = this.previewRight - this.previewLeft;
+		int previewHeight = this.previewBottom - this.previewTop;
+		int centerX = this.previewLeft + previewWidth / 2;
+		int centerY = this.previewBottom - 25;
+		int size = (int) (previewHeight / 3.0f * this.previewZoom);
+
+		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+		rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
+		rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
+
+		net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+				context,
+				(float) centerX,
+				(float) centerY,
+				(float) size,
+				new Vector3f(0.0F, 0.0F, 0.0F),
+				rotation,
+				new Quaternionf(),
+				this.client.player
+		);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (mouseX >= this.previewLeft && mouseX <= this.previewRight
+				&& mouseY >= this.previewTop && mouseY <= this.previewBottom) {
+			if (button == 0) {
+				this.draggingPreview = true;
+				this.lastMouseX = mouseX;
+				this.lastMouseY = mouseY;
+				return true;
+			}
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
+
+	@Override
+	public boolean mouseReleased(double mouseX, double mouseY, int button) {
+		this.draggingPreview = false;
+		return super.mouseReleased(mouseX, mouseY, button);
+	}
+
+	@Override
+	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+		if (this.draggingPreview) {
+			this.previewRotationYaw += (float) (mouseX - this.lastMouseX) * 1.35f;
+			this.previewRotationPitch = Math.max(-85.0f, Math.min(85.0f, this.previewRotationPitch + (float) (mouseY - this.lastMouseY) * 0.90f));
+			this.lastMouseX = mouseX;
+			this.lastMouseY = mouseY;
+			return true;
+		}
+		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+	}
+	*///?}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -358,12 +435,19 @@ public class CosmeticsScreen extends Screen {
 				return Text.literal(this.cosmetic.getName());
 			}
 
+			//? if >=1.21.10 {
 			@Override
 			public void render(DrawContext context, int y, int x, boolean hovered, float tickProgress) {
 				int entryX = getX();
 				int entryY = getY();
 				int entryWidth = getWidth();
 				int entryHeight = getHeight();
+			//?} else {
+			/*@Override
+			public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickProgress) {
+				int entryX = x;
+				int entryY = y;
+			*///?}
 
 				boolean isSelected = EquippedCosmeticListWidget.this.getSelectedOrNull() == this;
 				boolean isVisible = ClientCosmeticManager.getInstance().isCosmeticVisible(this.cosmetic.getId());
@@ -381,7 +465,7 @@ public class CosmeticsScreen extends Screen {
 				int checkSize = 14;
 
 				context.fill(checkX, checkY, checkX + checkSize, checkY + checkSize, isVisible ? 0xFF1E5E22 : 0xFF242424);
-				context.drawStrokedRectangle(checkX, checkY, checkSize, checkSize, isVisible ? 0xFF44FF44 : 0xFF555555);
+				drawStroke(context, checkX, checkY, checkSize, checkSize, isVisible ? 0xFF44FF44 : 0xFF555555);
 				if (isVisible) {
 					context.drawCenteredTextWithShadow(textRenderer, Text.literal("✔"), checkX + 7, checkY + 3, 0xFF44FF44);
 				} else {
@@ -394,10 +478,11 @@ public class CosmeticsScreen extends Screen {
 				int thumbSize = 24;
 
 				context.fill(thumbX, thumbY, thumbX + thumbSize, thumbY + thumbSize, 0x66111111);
-				context.drawStrokedRectangle(thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
+				drawStroke(context, thumbX, thumbY, thumbSize, thumbSize, isVisible ? 0x8855FF55 : 0x44888888);
 
 				Identifier thumbId = Identifier.of(this.cosmetic.getId().getNamespace(), "textures/thumbnails/" + this.cosmetic.getId().getPath());
 				if (CosmeticTextureManager.getInstance().hasTexture(thumbId)) {
+					//? if >=1.21.10 {
 					context.drawTexture(
 							RenderPipelines.GUI_TEXTURED,
 							thumbId,
@@ -410,6 +495,18 @@ public class CosmeticsScreen extends Screen {
 							thumbSize - 2,
 							thumbSize - 2
 					);
+					//?} else {
+					/*context.drawTexture(
+							thumbId,
+							thumbX + 1,
+							thumbY + 1,
+							0.0F,
+							0.0F,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2,
+							thumbSize - 2
+					);*///?}
 				} else {
 					context.drawCenteredTextWithShadow(textRenderer, Text.literal("§8..."), thumbX + thumbSize / 2, thumbY + thumbSize / 2 - 4, 0xFF666666);
 				}
@@ -421,7 +518,7 @@ public class CosmeticsScreen extends Screen {
 				int soloY = entryY + 8;
 
 				context.fill(soloX, soloY, soloX + soloW, soloY + soloH, 0xAA223344);
-				context.drawStrokedRectangle(soloX, soloY, soloW, soloH, 0xAA5588AA);
+				drawStroke(context, soloX, soloY, soloW, soloH, 0xAA5588AA);
 				context.drawCenteredTextWithShadow(textRenderer, Text.literal("Solo"), soloX + soloW / 2, soloY + 4, 0xFF99CCEE);
 
 				// 4. Cosmetic Name beside thumbnail (solid alpha 0xFF)
@@ -446,6 +543,7 @@ public class CosmeticsScreen extends Screen {
 				);
 			}
 
+			//? if >=1.21.10 {
 			@Override
 			public boolean mouseClicked(Click click, boolean bl) {
 				int entryX = getX();
@@ -469,6 +567,29 @@ public class CosmeticsScreen extends Screen {
 				EquippedCosmeticListWidget.this.setSelected(this);
 				return true;
 			}
+			//?} else {
+			/*
+			@Override
+			public boolean mouseClicked(double mouseX, double mouseY, int button) {
+				int entryX = getX();
+				int entryY = getY();
+				int entryWidth = getWidth();
+				int soloW = 32;
+				int soloH = 16;
+				int soloX = entryX + entryWidth - soloW - 4;
+				int soloY = entryY + 8;
+
+				if (mouseX >= soloX && mouseX <= soloX + soloW && mouseY >= soloY && mouseY <= soloY + soloH) {
+					ClientCosmeticManager.getInstance().solo(this.cosmetic.getId());
+					EquippedCosmeticListWidget.this.setSelected(this);
+					return true;
+				}
+
+				ClientCosmeticManager.getInstance().toggleCosmeticVisible(this.cosmetic.getId());
+				EquippedCosmeticListWidget.this.setSelected(this);
+				return true;
+			}
+			*///?}
 		}
 	}
 }

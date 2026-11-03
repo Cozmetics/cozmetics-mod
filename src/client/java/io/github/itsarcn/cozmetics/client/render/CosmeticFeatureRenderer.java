@@ -4,18 +4,16 @@ import io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager;
 import io.github.itsarcn.cozmetics.client.render.dynamic.CosmeticRenderManager;
 import io.github.itsarcn.cozmetics.cosmetic.Cosmetic;
 import io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import java.util.UUID;
 
-/**
- * Unified feature renderer that renders all equipped, visible cosmetics for players.
- * Supports pets, wings, auras, headwear, face, back, fists, and boots.
- */
+//? if >1.21.4 {
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+
 public class CosmeticFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
 	public CosmeticFeatureRenderer(FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel> context) {
 		super(context);
@@ -76,4 +74,60 @@ public class CosmeticFeatureRenderer extends FeatureRenderer<PlayerEntityRenderS
 		}
 	}
 }
+//?} else {
+/*
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.VertexConsumerProvider;
 
+public class CosmeticFeatureRenderer extends FeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>> {
+	public CosmeticFeatureRenderer(FeatureRendererContext<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>> context) {
+		super(context);
+	}
+
+	@Override
+	public void render(
+			MatrixStack matrices,
+			VertexConsumerProvider queue,
+			int light,
+			AbstractClientPlayerEntity player,
+			float limbAngle,
+			float limbDistance,
+			float tickDelta,
+			float animationProgress,
+			float headYaw,
+			float headPitch
+	) {
+		if (player.isInvisible() || player.isSpectator()) {
+			return;
+		}
+
+		CosmeticRenderManager renderManager = CosmeticRenderManager.getInstance();
+		ClientCosmeticManager manager = ClientCosmeticManager.getInstance();
+		PlayerEntityModel<AbstractClientPlayerEntity> playerModel = this.getContextModel();
+		UUID playerUuid = player.getUuid();
+
+		for (CosmeticCategory category : CosmeticCategory.values()) {
+			if (!category.isEnabled()) {
+				continue;
+			}
+
+			io.github.itsarcn.cozmetics.client.cosmetic.PlayerCosmeticTracker tracker =
+					io.github.itsarcn.cozmetics.client.cosmetic.PlayerCosmeticTracker.getInstance();
+			Cosmetic equipped = (playerUuid != null) ? tracker.getEquipped(playerUuid, category) : manager.getEquipped(category);
+			if (equipped == null) {
+				continue;
+			}
+
+			net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+			boolean isLocalPlayer = (mc != null && mc.player != null && playerUuid.equals(mc.player.getUuid()));
+			if (isLocalPlayer) {
+				if (!manager.isCosmeticVisible(equipped.getId())) {
+					continue;
+				}
+			}
+
+			renderManager.render(equipped, matrices, queue, light, player, playerModel);
+		}
+	}
+}
+*///?}

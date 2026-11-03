@@ -409,7 +409,11 @@ public final class UniversalImageDecoder {
 		NativeImage ni = new NativeImage(NativeImage.Format.RGBA, w, h, false);
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
+				//? if <=1.21.4 {
+				/*ni.setColor(x, y, bi.getRGB(x, y));*/
+				//?} else {
 				ni.setColorArgb(x, y, bi.getRGB(x, y));
+				//?}
 			}
 		}
 		return ni;
@@ -444,7 +448,11 @@ public final class UniversalImageDecoder {
 		for (int y = 0; y < size; y++) {
 			for (int x = 0; x < size; x++) {
 				boolean check = ((x / 4) + (y / 4)) % 2 == 0;
+				//? if <=1.21.4 {
+				/*placeholder.setColor(x, y, check ? 0xFFFF00FF : 0xFF000000);*/
+				//?} else {
 				placeholder.setColorArgb(x, y, check ? 0xFFFF00FF : 0xFF000000);
+				//?}
 			}
 		}
 		List<DecodedFrame> frames = new ArrayList<>(1);
