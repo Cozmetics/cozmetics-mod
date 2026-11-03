@@ -1,6 +1,8 @@
 # Gradle
 .gradle/
 build/
+**/build/
+.stonecutter/
 
 # Fabric / Minecraft run directory
 run/
