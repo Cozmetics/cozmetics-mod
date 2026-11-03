@@ -237,6 +237,9 @@ public class CosmeticsEngineTest {
 	@Test
 	void testOptionalModMenuEntrypointConfigured() throws Exception {
 		Path modJsonPath = Path.of("src/main/resources/fabric.mod.json");
+		if (!Files.exists(modJsonPath)) {
+			modJsonPath = Path.of("../../src/main/resources/fabric.mod.json");
+		}
 		assertTrue(Files.exists(modJsonPath));
 
 		try (FileReader reader = new FileReader(modJsonPath.toFile())) {
