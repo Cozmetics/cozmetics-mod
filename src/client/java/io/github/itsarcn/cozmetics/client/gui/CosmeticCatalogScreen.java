@@ -182,11 +182,14 @@ public class CosmeticCatalogScreen extends Screen {
 		addDrawableChild(actionBtn);
 
 		// Populate catalogue items
+		this.catalogManager.loadCachedCatalogue();
 		updateCatalogFilter();
 
 		// Auto-select first item if available and none selected
 		if (this.selectedItem == null && !this.catalogManager.getCachedItems().isEmpty()) {
 			selectItem(this.catalogManager.getCachedItems().get(0));
+		} else if (this.catalogManager.getCachedItems().isEmpty()) {
+			refreshCatalog();
 		}
 	}
 
@@ -236,7 +239,17 @@ public class CosmeticCatalogScreen extends Screen {
 	}
 
 	private void refreshCatalog() {
-		HttpCosmeticsClient.getInstance().syncCatalogue();
+		HttpCosmeticsClient.getInstance().syncCatalogue().whenComplete((count, ex) -> {
+			if (this.client != null) {
+				this.client.execute(() -> {
+					this.catalogManager.loadCachedCatalogue();
+					updateCatalogFilter();
+					if (this.selectedItem == null && !this.catalogManager.getCachedItems().isEmpty()) {
+						selectItem(this.catalogManager.getCachedItems().get(0));
+					}
+				});
+			}
+		});
 		updateCatalogFilter();
 	}
 
@@ -254,10 +267,18 @@ public class CosmeticCatalogScreen extends Screen {
 		}
 	}
 
+	//? if <=1.21.4 {
+	/*
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+		// Prevent super.render() from triggering unwanted blur / darkening over UI text on <=1.21.4
+	}
+	*///?}
+
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		// 1. Dark ambient background tint
-		context.fill(0, 0, this.width, this.height, 0xDD111115);
+		context.fill(0, 0, this.width, this.height, 0xEE111115);
 
 		// 2. Section Headers
 		int headerY = 12;
@@ -428,20 +449,25 @@ public class CosmeticCatalogScreen extends Screen {
 		int centerY = this.previewTop + previewH / 2;
 		int size = (int) (Math.min(previewW, previewH) * 0.45f * this.previewZoom);
 
-		net.minecraft.client.util.math.MatrixStack matrices = context.getMatrices();
-		matrices.push();
-		matrices.translate(centerX, centerY, 150.0);
-		matrices.scale(size, size, -size);
-		Quaternionf rotation = new Quaternionf();
-		rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
-		rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
-		matrices.multiply(rotation);
+		context.enableScissor(this.previewLeft + 2, this.previewTop + 2, this.previewRight - 2, this.previewBottom - 2);
+		try {
+			net.minecraft.client.util.math.MatrixStack matrices = context.getMatrices();
+			matrices.push();
+			matrices.translate(centerX, centerY, 150.0);
+			matrices.scale(size, size, -size);
+			Quaternionf rotation = new Quaternionf();
+			rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
+			rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
+			matrices.multiply(rotation);
 
-		io.github.itsarcn.cozmetics.client.render.dynamic.DynamicCosmeticRenderer renderer =
-				io.github.itsarcn.cozmetics.client.render.dynamic.CosmeticRenderManager.getInstance().getRenderer(cosmetic);
-		renderer.renderCosmetic(matrices, context.getVertexConsumers(), null, 0x00F000F0, null, null);
-		context.getVertexConsumers().draw();
-		matrices.pop();
+			io.github.itsarcn.cozmetics.client.render.dynamic.DynamicCosmeticRenderer renderer =
+					io.github.itsarcn.cozmetics.client.render.dynamic.CosmeticRenderManager.getInstance().getRenderer(cosmetic);
+			renderer.renderCosmetic(matrices, context.getVertexConsumers(), null, 0x00F000F0, null, null);
+			context.getVertexConsumers().draw();
+			matrices.pop();
+		} finally {
+			context.disableScissor();
+		}
 
 		context.drawCenteredTextWithShadow(
 				this.textRenderer,
@@ -568,10 +594,11 @@ public class CosmeticCatalogScreen extends Screen {
 
 				Identifier thumbId = Identifier.of(this.item.id().getNamespace(), "textures/thumbnails/" + this.item.id().getPath());
 				if (CosmeticTextureManager.getInstance().hasTexture(thumbId)) {
+					Identifier activeThumb = CosmeticTextureManager.getInstance().getTexturePath(thumbId, System.currentTimeMillis());
 					//? if >=1.21.10 {
 					context.drawTexture(
 							RenderPipelines.GUI_TEXTURED,
-							thumbId,
+							activeThumb,
 							thumbX + 1,
 							thumbY + 1,
 							0.0F,
@@ -583,7 +610,7 @@ public class CosmeticCatalogScreen extends Screen {
 					);
 					//?} else {
 					/*context.drawTexture(
-							thumbId,
+							activeThumb,
 							thumbX + 1,
 							thumbY + 1,
 							0.0F,
@@ -672,9 +699,10 @@ public class CosmeticCatalogScreen extends Screen {
 			/*
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				int entryX = getX();
-				int entryY = getY();
-				int entryWidth = getWidth();
+				int index = CatalogListWidget.this.children().indexOf(this);
+				int entryX = CatalogListWidget.this.getRowLeft();
+				int entryY = CatalogListWidget.this.getRowTop(index);
+				int entryWidth = CatalogListWidget.this.getRowWidth();
 				int btnW = 34;
 				int btnH = 16;
 				int btnX = entryX + entryWidth - btnW - 4;

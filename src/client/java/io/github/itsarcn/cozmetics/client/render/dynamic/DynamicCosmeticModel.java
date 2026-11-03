@@ -46,6 +46,19 @@ public class DynamicCosmeticModel extends GeoModel<DynamicCosmeticAnimatable> {
 	@Override
 	public Identifier getTextureResource(DynamicCosmeticAnimatable animatable) {
 		return resolveTexture();
+	}
+
+	@Override
+	public void applyMolangQueries(software.bernie.geckolib.animation.AnimationState<DynamicCosmeticAnimatable> animationState, double animTime) {
+		software.bernie.geckolib.loading.math.MathParser.setVariable("query.life_time", () -> animTime / 20.0);
+		software.bernie.geckolib.loading.math.MathParser.setVariable("query.anim_time", () -> animTime / 20.0);
+		software.bernie.geckolib.loading.math.MathParser.setVariable("query.actor_count", () -> 1.0);
+		software.bernie.geckolib.loading.math.MathParser.setVariable("query.time_of_day", () -> 0.0);
+		software.bernie.geckolib.loading.math.MathParser.setVariable("query.moon_phase", () -> 0.0);
+		net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+		if (mc != null && mc.world != null) {
+			super.applyMolangQueries(animationState, animTime);
+		}
 	}*/
 	//?} else {
 	@Override

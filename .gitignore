@@ -25,6 +25,7 @@ out/
 Thumbs.db
 *.log
 logs/
+**/.lwjgl/
 
 # Raw asset source files
 assets-desgins/

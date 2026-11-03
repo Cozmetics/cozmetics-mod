@@ -159,7 +159,10 @@ public class CosmeticsScreen extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		// 1. Draw Title and Subtitle with solid alpha (0xFF)
+		// 1. Dark ambient background tint
+		context.fill(0, 0, this.width, this.height, 0xEE111115);
+
+		// 2. Draw Title and Subtitle with solid alpha (0xFF)
 		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFFA0);
 		context.drawCenteredTextWithShadow(
 				this.textRenderer,
@@ -335,31 +338,104 @@ public class CosmeticsScreen extends Screen {
 	}
 	//?} else {
 	/*
-	private void renderPlayerPreview(DrawContext context, float delta) {
-		if (this.client == null || this.client.player == null) {
-			return;
-		}
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+		// Prevent super.render() from triggering unwanted blur / darkening over UI text on <=1.21.4
+	}
 
+	private void renderPlayerPreview(DrawContext context, float delta) {
 		int previewWidth = this.previewRight - this.previewLeft;
 		int previewHeight = this.previewBottom - this.previewTop;
 		int centerX = this.previewLeft + previewWidth / 2;
-		int centerY = this.previewBottom - 25;
-		int size = (int) (previewHeight / 3.0f * this.previewZoom);
+		int centerY = this.previewTop + previewHeight / 2;
+		int baseSize = (int) (previewHeight / 2.35f);
+		int size = Math.max(25, Math.min(300, (int) (baseSize * this.previewZoom)));
 
 		Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
 		rotation.rotateX((float) Math.toRadians(this.previewRotationPitch));
 		rotation.rotateY((float) Math.toRadians(this.previewRotationYaw));
 
-		net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
-				context,
-				(float) centerX,
-				(float) centerY,
-				(float) size,
-				new Vector3f(0.0F, 0.0F, 0.0F),
-				rotation,
-				new Quaternionf(),
-				this.client.player
-		);
+		context.enableScissor(this.previewLeft + 2, this.previewTop + 2, this.previewRight - 2, this.previewBottom - 2);
+		try {
+			if (this.client != null && this.client.player != null) {
+				int feetY = centerY + (int) (size * 0.78f);
+				net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+						context,
+						(float) centerX,
+						(float) feetY,
+						(float) size,
+						new Vector3f(0.0F, 0.0F, 0.0F),
+						rotation,
+						new Quaternionf(),
+						this.client.player
+				);
+			} else if (this.client != null) {
+				net.minecraft.client.util.SkinTextures skin = null;
+				try {
+					skin = this.client.getSkinProvider().getSkinTextures(this.client.getGameProfile());
+				} catch (Throwable ignored) {}
+				Identifier skinTex = (skin != null && skin.texture() != null) ? skin.texture() : net.minecraft.client.util.DefaultSkinHelper.getTexture();
+				boolean slim = skin != null && "slim".equals(skin.model().getName());
+				var layer = slim ? net.minecraft.client.render.entity.model.EntityModelLayers.PLAYER_SLIM : net.minecraft.client.render.entity.model.EntityModelLayers.PLAYER;
+				var part = this.client.getEntityModelLoader().getModelPart(layer);
+				var dummyModel = new net.minecraft.client.render.entity.model.PlayerEntityModel<>(part, slim);
+
+				// Enable outer 3D layers and sync transformations
+				dummyModel.setVisible(true);
+				dummyModel.hat.copyTransform(dummyModel.head);
+				dummyModel.jacket.copyTransform(dummyModel.body);
+				dummyModel.leftSleeve.copyTransform(dummyModel.leftArm);
+				dummyModel.rightSleeve.copyTransform(dummyModel.rightArm);
+				dummyModel.leftPants.copyTransform(dummyModel.leftLeg);
+				dummyModel.rightPants.copyTransform(dummyModel.rightLeg);
+
+				// Natural stance with subtle breathing
+				float age = (System.currentTimeMillis() % 100000000L) / 50.0F;
+				dummyModel.leftArm.roll = -0.06F;
+				dummyModel.rightArm.roll = 0.06F;
+				dummyModel.leftArm.pitch = (float) Math.cos(age * 0.06F) * 0.04F;
+				dummyModel.rightArm.pitch = -(float) Math.cos(age * 0.06F) * 0.04F;
+				dummyModel.head.pitch = 0.0F;
+				dummyModel.head.yaw = 0.0F;
+
+				net.minecraft.client.util.math.MatrixStack matrices = context.getMatrices();
+				matrices.push();
+				matrices.translate(centerX, centerY, 150.0);
+				matrices.scale(size, size, -size);
+				matrices.multiply(rotation);
+				matrices.scale(-1.0F, -1.0F, 1.0F);
+				matrices.translate(0.0F, -0.75F, 0.0F);
+
+				net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
+
+				net.minecraft.client.render.VertexConsumer vc = context.getVertexConsumers().getBuffer(net.minecraft.client.render.RenderLayer.getEntityTranslucent(skinTex));
+				dummyModel.head.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.hat.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.body.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.jacket.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.leftArm.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.leftSleeve.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.rightArm.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.rightSleeve.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.leftLeg.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.leftPants.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.rightLeg.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+				dummyModel.rightPants.render(matrices, vc, 0x00F000F0, net.minecraft.client.render.OverlayTexture.DEFAULT_UV);
+
+				for (io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory category : io.github.itsarcn.cozmetics.cosmetic.CosmeticCategory.values()) {
+					io.github.itsarcn.cozmetics.cosmetic.Cosmetic cosmetic = io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager.getInstance().getEquipped(category);
+					if (cosmetic != null && io.github.itsarcn.cozmetics.client.cosmetic.ClientCosmeticManager.getInstance().isCosmeticVisible(cosmetic.getId())) {
+						var renderer = io.github.itsarcn.cozmetics.client.render.dynamic.CosmeticRenderManager.getInstance().getRenderer(cosmetic);
+						renderer.renderCosmetic(matrices, context.getVertexConsumers(), null, 0x00F000F0, null, dummyModel);
+					}
+				}
+				context.getVertexConsumers().draw();
+				net.minecraft.client.render.DiffuseLighting.disableGuiDepthLighting();
+				matrices.pop();
+			}
+		} finally {
+			context.disableScissor();
+		}
 	}
 
 	@Override
@@ -482,10 +558,11 @@ public class CosmeticsScreen extends Screen {
 
 				Identifier thumbId = Identifier.of(this.cosmetic.getId().getNamespace(), "textures/thumbnails/" + this.cosmetic.getId().getPath());
 				if (CosmeticTextureManager.getInstance().hasTexture(thumbId)) {
+					Identifier activeThumb = CosmeticTextureManager.getInstance().getTexturePath(thumbId, System.currentTimeMillis());
 					//? if >=1.21.10 {
 					context.drawTexture(
 							RenderPipelines.GUI_TEXTURED,
-							thumbId,
+							activeThumb,
 							thumbX + 1,
 							thumbY + 1,
 							0.0F,
@@ -497,7 +574,7 @@ public class CosmeticsScreen extends Screen {
 					);
 					//?} else {
 					/*context.drawTexture(
-							thumbId,
+							activeThumb,
 							thumbX + 1,
 							thumbY + 1,
 							0.0F,
@@ -571,9 +648,10 @@ public class CosmeticsScreen extends Screen {
 			/*
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				int entryX = getX();
-				int entryY = getY();
-				int entryWidth = getWidth();
+				int index = EquippedCosmeticListWidget.this.children().indexOf(this);
+				int entryX = EquippedCosmeticListWidget.this.getRowLeft();
+				int entryY = EquippedCosmeticListWidget.this.getRowTop(index);
+				int entryWidth = EquippedCosmeticListWidget.this.getRowWidth();
 				int soloW = 32;
 				int soloH = 16;
 				int soloX = entryX + entryWidth - soloW - 4;

@@ -53,6 +53,11 @@ public class DynamicCosmeticAnimatable implements GeoAnimatable {
 	/*@Override
 	public double getTick(@org.jspecify.annotations.Nullable Object object) {
 		return (System.currentTimeMillis() % 100000000L) / 50.0;
+	}
+
+	@Override
+	public boolean shouldPlayAnimsWhileGamePaused() {
+		return true;
 	}*///?}
 }
 

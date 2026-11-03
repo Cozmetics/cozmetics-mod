@@ -97,7 +97,7 @@ public class HttpCosmeticsClient {
 
 		this.httpClient = HttpClient.newBuilder()
 				.executor(this.executor)
-				.connectTimeout(Duration.ofSeconds(5))
+				.connectTimeout(Duration.ofSeconds(10))
 				.followRedirects(HttpClient.Redirect.NORMAL)
 				.build();
 	}
@@ -174,7 +174,7 @@ public class HttpCosmeticsClient {
 		HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(baseUrl + "/mod/catalogue"))
 				.header("Accept", "application/json")
-				.timeout(Duration.ofSeconds(10))
+				.timeout(Duration.ofSeconds(15))
 				.GET()
 				.build();
 
